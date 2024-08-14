@@ -31,11 +31,11 @@
     <Filter Include="Source Files\touch_power">
       <UniqueIdentifier>{48991f5f-ce72-428a-bb02-7ff9f171fa57}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\ft5x">
-      <UniqueIdentifier>{e315ae58-595b-4761-a85d-b9f815945abc}</UniqueIdentifier>
+    <Filter Include="Source Files\fts521">
+      <UniqueIdentifier>{f7e35444-e3db-42ad-8f2e-286621a6d109}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\ft5x">
-      <UniqueIdentifier>{1a4a2c90-09cc-463b-b270-18cd15f46d6c}</UniqueIdentifier>
+    <Filter Include="Header Files\fts521">
+      <UniqueIdentifier>{e73d6cd3-9f07-4699-9644-66205782f98e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -46,9 +46,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\hid.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\idle.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\init.c">
@@ -75,9 +72,6 @@
     <ClCompile Include="..\src\Cross Platform Shim\hweight.c">
       <Filter>Source Files\Cross Platform Shim</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\selftest\enoselftest.c">
-      <Filter>Source Files\selftest</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\selftest\selftest.c">
       <Filter>Source Files\selftest</Filter>
     </ClCompile>
@@ -87,8 +81,14 @@
     <ClCompile Include="..\src\report.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\ft5x\ftinternal.c">
-      <Filter>Source Files\ft5x</Filter>
+    <ClCompile Include="..\src\fts521\ftsinternal.c">
+      <Filter>Source Files\fts521</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\idle.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\fts521\ftscore.c">
+      <Filter>Source Files\fts521</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -97,7 +97,10 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Inf Include="..\src\FocalTechTouch.inf">
+    <Inf Include="..\src\FingerTipS521.inf">
+      <Filter>Driver Files</Filter>
+    </Inf>
+    <Inf Include="..\src\FingerTipS521-FodReport.inf">
       <Filter>Driver Files</Filter>
     </Inf>
   </ItemGroup>
@@ -150,9 +153,6 @@
     <ClInclude Include="..\include\selftest\selftest.h">
       <Filter>Header Files\selftest</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\selftest\enoselftest.h">
-      <Filter>Header Files\selftest</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\touch_power\touch_power.h">
       <Filter>Header Files\touch_power</Filter>
     </ClInclude>
@@ -162,8 +162,8 @@
     <ClInclude Include="..\include\report.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\ft5x\ftinternal.h">
-      <Filter>Header Files\ft5x</Filter>
+    <ClInclude Include="..\include\fts521\ftsinternal.h">
+      <Filter>Header Files\fts521</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

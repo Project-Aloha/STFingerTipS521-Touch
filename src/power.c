@@ -9,7 +9,7 @@
 
     Abstract:
 
-        Contains FocalTech power-on and power-off functionality
+        Contains FingerTipS power-on and power-off functionality
 
     Environment:
 
@@ -22,7 +22,7 @@
 #include <Cross Platform Shim\compat.h>
 #include <controller.h>
 #include <spb.h>
-#include <ft5x\ftinternal.h>
+#include <fts521\ftsinternal.h>
 #include <internal.h>
 #include <touch_power\touch_power.h>
 #include <power.tmh>
@@ -37,7 +37,7 @@ TchPowerSettingCallback(
 {
     NTSTATUS status = STATUS_SUCCESS;
     PDEVICE_EXTENSION devContext = NULL;
-    FT5X_CONTROLLER_CONTEXT* ControllerContext = NULL;
+    FTS521_CONTROLLER_CONTEXT* ControllerContext = NULL;
     SPB_CONTEXT* SpbContext = NULL;
 
     if (Context == NULL)
@@ -53,7 +53,7 @@ TchPowerSettingCallback(
     }
 
     devContext = (PDEVICE_EXTENSION)Context;
-    ControllerContext = (FT5X_CONTROLLER_CONTEXT*)devContext->TouchContext;
+    ControllerContext = (FTS521_CONTROLLER_CONTEXT*)devContext->TouchContext;
     SpbContext = &(devContext->I2CContext);
 
     //
@@ -88,7 +88,7 @@ TchPowerSettingCallback(
                 TRACE_POWER,
                 "On Battery Power");
 
-            status = Ft5xChangeChargerConnectedState(
+            status = Fts521ChangeChargerConnectedState(
                 ControllerContext,
                 SpbContext,
                 0
@@ -112,7 +112,7 @@ TchPowerSettingCallback(
                 TRACE_POWER,
                 "On External Power");
 
-            status = Ft5xChangeChargerConnectedState(
+            status = Fts521ChangeChargerConnectedState(
                 ControllerContext,
                 SpbContext,
                 1
@@ -159,6 +159,12 @@ TchPowerSettingCallback(
         DWORD GestureEnabled = 0;
 
         switch (DisplayState)
+        // Please note:
+        // 1.This method is not applicable to FingerTipS-Touch521 touch 
+        //   chip power management, so do not change its power status.
+        // 2.Meanwhile, keeping the power on will increase power consumption, 
+        //   which is currently an unavoidable issue that we hope to improve 
+        //   in the future
         {
         case 0:
             Trace(
@@ -166,52 +172,7 @@ TchPowerSettingCallback(
                 TRACE_POWER,
                 "The Display is Off");
 
-            status = PowerToggle(&devContext->TouchPowerContext, 0);
-
-            if (!NT_SUCCESS(status))
-            {
-                Trace(
-                    TRACE_LEVEL_ERROR,
-                    TRACE_POWER,
-                    "Error changing touch power state - 0x%08lX",
-                    status);
-                goto exit;
-            }
-
-            if (NT_SUCCESS(RtlReadRegistryValue(
-                (PCWSTR)L"\\Registry\\Machine\\SOFTWARE\\OEM\\Nokia\\Touch\\WakeupGesture",
-                (PCWSTR)L"Enabled",
-                REG_DWORD,
-                &GestureEnabled,
-                sizeof(DWORD))) && GestureEnabled == 1)
-            {
-                status = Ft5xSetReportingFlagsF12(
-                    ControllerContext,
-                    SpbContext,
-                    FT5X_F12_REPORTING_WAKEUP_GESTURE_MODE,
-                    NULL
-                );
-
-                if (!NT_SUCCESS(status))
-                {
-                    Trace(
-                        TRACE_LEVEL_ERROR,
-                        TRACE_POWER,
-                        "Error Changing Reporting Mode for F12 - 0x%08lX",
-                        status);
-                    goto exit;
-                }
-            }
-
-            if (!NT_SUCCESS(status))
-            {
-                Trace(
-                    TRACE_LEVEL_ERROR,
-                    TRACE_POWER,
-                    "Error Changing Reporting Mode for F12 - 0x%08lX",
-                    status);
-                goto exit;
-            }
+            SetScanMode(ControllerContext->FxDevice, SpbContext, SCAN_MODE_LOW_POWER, 0x00);
 
             break;
         case 1:
@@ -220,34 +181,8 @@ TchPowerSettingCallback(
                 TRACE_POWER,
                 "The Display is On");
 
-            status = PowerToggle(&devContext->TouchPowerContext, 1);
+            SetScanMode(ControllerContext->FxDevice, SpbContext, SCAN_MODE_ACTIVE, 0x01);
 
-            if (!NT_SUCCESS(status))
-            {
-                Trace(
-                    TRACE_LEVEL_ERROR,
-                    TRACE_POWER,
-                    "Error changing touch power state - 0x%08lX",
-                    status);
-                goto exit;
-            }
-
-            status = Ft5xSetReportingFlagsF12(
-                ControllerContext,
-                SpbContext,
-                FT5X_F12_REPORTING_CONTINUOUS_MODE,
-                NULL
-            );
-
-            if (!NT_SUCCESS(status))
-            {
-                Trace(
-                    TRACE_LEVEL_ERROR,
-                    TRACE_POWER,
-                    "Error Changing Reporting Mode for F12 - 0x%08lX",
-                    status);
-                goto exit;
-            }
             break;
         case 2:
             Trace(
@@ -292,10 +227,10 @@ Return Value:
 
 --*/
 {    
-    FT5X_CONTROLLER_CONTEXT* controller;
+    FTS521_CONTROLLER_CONTEXT* controller;
     NTSTATUS status;
 
-    controller = (FT5X_CONTROLLER_CONTEXT*) ControllerContext;
+    controller = (FTS521_CONTROLLER_CONTEXT*) ControllerContext;
 
     //
     // Check if we were already on
@@ -310,10 +245,10 @@ Return Value:
     //
     // Attempt to put the controller into operating mode 
     //
-    status = Ft5xChangeSleepState(
+    status = Fts521ChangeSleepState(
         controller,
         SpbContext,
-        FT5X_F01_DEVICE_CONTROL_SLEEP_MODE_OPERATING);
+        FTS521_F01_DEVICE_CONTROL_SLEEP_MODE_OPERATING);
 
     if (!NT_SUCCESS(status))
     {
@@ -353,10 +288,10 @@ Return Value:
 
 --*/
 {
-    FT5X_CONTROLLER_CONTEXT* controller;
+    FTS521_CONTROLLER_CONTEXT* controller;
     NTSTATUS status;
 
-    controller = (FT5X_CONTROLLER_CONTEXT*) ControllerContext;
+    controller = (FTS521_CONTROLLER_CONTEXT*) ControllerContext;
 
     //
     // Interrupts are now disabled but the ISR may still be
@@ -368,10 +303,10 @@ Return Value:
     //
     // Put the chip in sleep mode
     //
-    status = Ft5xChangeSleepState(
+    status = Fts521ChangeSleepState(
         ControllerContext,
         SpbContext,
-        FT5X_F01_DEVICE_CONTROL_SLEEP_MODE_SLEEPING);
+        FTS521_F01_DEVICE_CONTROL_SLEEP_MODE_SLEEPING);
 
     if (!NT_SUCCESS(status))
     {

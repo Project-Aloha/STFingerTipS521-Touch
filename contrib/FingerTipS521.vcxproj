@@ -41,8 +41,8 @@
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">Win32</Platform>
     <SampleGuid>{25B3301B-A9D9-4EE3-8EA5-B1F1FBB3A18C}</SampleGuid>
-    <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
-    <ProjectName>FocalTechTouch</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <ProjectName>FingerTipS521</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -170,49 +170,53 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <TargetName>FocalTechTouch</TargetName>
+    <TargetName>FingerTipS521</TargetName>
     <IntDir>..\intermediate\$(Platform)\$(ConfigurationName)\</IntDir>
     <IncludePath>$(IntDir);$(SolutionDir)..\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>FocalTechTouch</TargetName>
+    <TargetName>FingerTipS521</TargetName>
     <IntDir>..\intermediate\$(Platform)\$(ConfigurationName)\</IntDir>
     <IncludePath>$(IntDir);$(SolutionDir)..\include;$(IncludePath)</IncludePath>
+    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <TargetName>FocalTechTouch</TargetName>
+    <TargetName>FingerTipS521</TargetName>
     <IntDir>..\intermediate\$(Platform)\$(ConfigurationName)\</IntDir>
     <IncludePath>$(IntDir);$(SolutionDir)..\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
-    <TargetName>FocalTechTouch</TargetName>
+    <TargetName>FingerTipS521</TargetName>
     <IntDir>..\intermediate\$(Platform)\$(ConfigurationName)\</IntDir>
     <IncludePath>$(IntDir);$(SolutionDir)..\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
-    <TargetName>FocalTechTouch</TargetName>
+    <TargetName>FingerTipS521</TargetName>
     <IntDir>..\intermediate\$(Platform)\$(ConfigurationName)\</IntDir>
     <IncludePath>$(IntDir);$(SolutionDir)..\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <TargetName>FocalTechTouch</TargetName>
+    <TargetName>FingerTipS521</TargetName>
     <IntDir>..\intermediate\$(Platform)\$(ConfigurationName)\</IntDir>
     <IncludePath>$(IntDir);$(SolutionDir)..\include;$(IncludePath)</IncludePath>
+    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <TargetName>FocalTechTouch</TargetName>
+    <TargetName>FingerTipS521</TargetName>
     <IntDir>..\intermediate\$(Platform)\$(ConfigurationName)\</IntDir>
     <IncludePath>$(IntDir);$(SolutionDir)..\include;$(IncludePath)</IncludePath>
+    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
-    <TargetName>FocalTechTouch</TargetName>
+    <TargetName>FingerTipS521</TargetName>
     <IncludePath>$(IntDir);$(SolutionDir)..\include;$(IncludePath)</IncludePath>
     <IntDir>..\intermediate\$(Platform)\$(ConfigurationName)\</IntDir>
+    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <TreatWarningAsError>true</TreatWarningAsError>
-      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);DRIVER;_WIN32_WINNT=0x602;_WINNT_;_SAMPLE_DESCRIPTOR_</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);.;$(DDK_INC_PATH);$(DDK_INC_PATH)\wdm\</AdditionalIncludeDirectories>
       <ExceptionHandling>
@@ -236,8 +240,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <TreatWarningAsError>true</TreatWarningAsError>
-      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);DRIVER;_WIN32_WINNT=0x602;_WINNT_;_SAMPLE_DESCRIPTOR_</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);.;$(DDK_INC_PATH);$(DDK_INC_PATH)\wdm\</AdditionalIncludeDirectories>
       <ExceptionHandling>
@@ -261,8 +265,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <TreatWarningAsError>true</TreatWarningAsError>
-      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);DRIVER;_WIN32_WINNT=0x602;_WINNT_;_SAMPLE_DESCRIPTOR_</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);.;$(DDK_INC_PATH);$(DDK_INC_PATH)\wdm\</AdditionalIncludeDirectories>
       <ExceptionHandling>
@@ -286,8 +290,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <ClCompile>
-      <TreatWarningAsError>true</TreatWarningAsError>
-      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);DRIVER;_WIN32_WINNT=0x602;_WINNT_;_SAMPLE_DESCRIPTOR_</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);.;$(DDK_INC_PATH);$(DDK_INC_PATH)\wdm\</AdditionalIncludeDirectories>
       <ExceptionHandling>
@@ -311,8 +315,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <ClCompile>
-      <TreatWarningAsError>true</TreatWarningAsError>
-      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);DRIVER;_WIN32_WINNT=0x602;_WINNT_;_SAMPLE_DESCRIPTOR_</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);.;$(DDK_INC_PATH);$(DDK_INC_PATH)\wdm\</AdditionalIncludeDirectories>
       <ExceptionHandling>
@@ -337,7 +341,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <TreatWarningAsError>false</TreatWarningAsError>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);DRIVER;_WIN32_WINNT=0x602;_WINNT_;_SAMPLE_DESCRIPTOR_</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);.;$(DDK_INC_PATH);$(DDK_INC_PATH)\wdm\</AdditionalIncludeDirectories>
       <ExceptionHandling>
@@ -362,7 +366,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
       <TreatWarningAsError>false</TreatWarningAsError>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);DRIVER;_WIN32_WINNT=0x602;_WINNT_;_SAMPLE_DESCRIPTOR_</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);.;$(DDK_INC_PATH);$(DDK_INC_PATH)\wdm\</AdditionalIncludeDirectories>
       <ExceptionHandling>
@@ -386,8 +390,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <ClCompile>
-      <TreatWarningAsError>true</TreatWarningAsError>
-      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);DRIVER;_WIN32_WINNT=0x602;_WINNT_;_SAMPLE_DESCRIPTOR_</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);.;$(DDK_INC_PATH);$(DDK_INC_PATH)\wdm\</AdditionalIncludeDirectories>
       <ExceptionHandling>
@@ -410,27 +414,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Inf Exclude="@(Inf)" Include="..\src\FocalTechTouch.inf" />
+    <Inf Include="..\src\FingerTipS521-FodReport.inf" />
+    <Inf Exclude="@(Inf)" Include="..\src\FingerTipS521.inf" />
     <FilesToPackage Include="$(TargetPath)" Condition="'$(ConfigurationType)'=='Driver' or '$(ConfigurationType)'=='DynamicLibrary'" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Cross Platform Shim\bitops.c" />
     <ClCompile Include="..\src\Cross Platform Shim\hweight.c" />
+    <ClCompile Include="..\src\fts521\ftscore.c" />
+    <ClCompile Include="..\src\fts521\ftsinternal.c" />
+    <ClCompile Include="..\src\idle.c" />
     <ClCompile Include="..\src\report.c" />
     <ClCompile Include="..\src\touch_power\touch_power.c" />
     <ClCompile Include="..\src\selftest\selftest.c" />
-    <ClCompile Include="..\src\selftest\enoselftest.c" />
     <ClCompile Include="..\src\device.c" />
     <ClCompile Include="..\src\driver.c" />
     <ClCompile Include="..\src\hid.c" />
-    <ClCompile Include="..\src\idle.c" />
     <ClCompile Include="..\src\init.c" />
     <ClCompile Include="..\src\power.c" />
     <ClCompile Include="..\src\queue.c" />
     <ClCompile Include="..\src\registry.c" />
     <ClCompile Include="..\src\resolutions.c" />
     <ClCompile Include="..\src\spb.c" />
-    <ClCompile Include="..\src\ft5x\ftinternal.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\Resource.rc" />
@@ -439,10 +444,10 @@
     <ClInclude Include="..\include\Cross Platform Shim\bitops.h" />
     <ClInclude Include="..\include\Cross Platform Shim\compat.h" />
     <ClInclude Include="..\include\Cross Platform Shim\hweight.h" />
+    <ClInclude Include="..\include\fts521\ftsinternal.h" />
     <ClInclude Include="..\include\report.h" />
     <ClInclude Include="..\include\touch_power\public.h" />
     <ClInclude Include="..\include\touch_power\touch_power.h" />
-    <ClInclude Include="..\include\selftest\enoselftest.h" />
     <ClInclude Include="..\include\selftest\selftest.h" />
     <ClInclude Include="..\include\controller.h" />
     <ClInclude Include="..\include\device.h" />
@@ -456,7 +461,6 @@
     <ClInclude Include="..\include\resource.h" />
     <ClInclude Include="..\include\spb.h" />
     <ClInclude Include="..\include\trace.h" />
-    <ClInclude Include="..\include\ft5x\ftinternal.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

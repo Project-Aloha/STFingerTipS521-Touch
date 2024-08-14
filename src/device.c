@@ -23,12 +23,12 @@
 #include <controller.h>
 #include <device.h>
 #include <spb.h>
-//#include <FocalTechTouchDriverETW.h>
+//#include <FingerTipS521DriverETW.h>
 #include <idle.h>
 #include <hid.h>
 #include <gpio.h>
 #include <device.h>
-#include <ft5x/ftinternal.h>
+#include <fts521/ftsinternal.h>
 #include <report.h>
 #include <touch_power/touch_power.h>
 #include <device.tmh>
@@ -51,7 +51,7 @@ OnInterruptIsr(
     processing.
 
     This is a PASSIVE_LEVEL ISR. ACPI should specify
-    level-triggered interrupts when using FocalTech 3202.
+    level-triggered interrupts when using FingerTipS 521.
 
   Arguments:
 
@@ -92,10 +92,15 @@ OnInterruptIsr(
         goto exit;
     }
 
+    Trace(
+        TRACE_LEVEL_ERROR,
+        TRACE_REPORTING,
+        "servicing interrupts - Start");
+
     //
     // Service touch interrupts.
     //
-    status = Ft5xServiceInterrupts(
+    status = Fts521ServiceInterrupts(
         devContext->TouchContext,
         &devContext->I2CContext,
         &devContext->ReportContext);
@@ -155,7 +160,7 @@ Return Value:
     }
 
     //
-    // N.B. This FT5X chip's IRQ is level-triggered, but cannot be enabled in
+    // N.B. This FTS521 chip's IRQ is level-triggered, but cannot be enabled in
     //      ACPI until passive-level interrupt handling is added to the driver.
     //      Service chip in case we missed an edge during D3 or boot-up.
     //
@@ -356,6 +361,8 @@ OnPrepareHardware(
             devContext->ResetGpioId.HighPart =
                 res->u.Connection.IdHighPart;
 
+            Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Reset GPIO: %08x-%08x", res->u.Connection.IdHighPart, res->u.Connection.IdLowPart);
+
             devContext->HasResetGpio = TRUE;
         }
     }
@@ -379,29 +386,29 @@ OnPrepareHardware(
             goto exit;
         }
 
-        Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Starting bring up sequence for the controller");
+        // Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Starting bring up sequence for the controller");
 
-        Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to low");
+        // Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to low");
 
-        value = 0;
-        SetGPIO(devContext->ResetGpio, &value);
+        // value = 0;
+        // SetGPIO(devContext->ResetGpio, &value);
 
-        Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Waiting...");
+        //Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Waiting...");
 
-        delay.QuadPart = -10 * TOUCH_POWER_RAIL_STABLE_TIME;
-        KeDelayExecutionThread(KernelMode, TRUE, &delay);
+        // delay.QuadPart = -10 * TOUCH_POWER_RAIL_STABLE_TIME;
+        // KeDelayExecutionThread(KernelMode, TRUE, &delay);
 
-        Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to high");
+        // Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to high");
 
-        value = 1;
-        SetGPIO(devContext->ResetGpio, &value);
+        // value = 1;
+        // SetGPIO(devContext->ResetGpio, &value);
 
-        Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Waiting...");
+        // Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Waiting...");
 
-        delay.QuadPart = -10 * TOUCH_DELAY_TO_COMMUNICATE;
-        KeDelayExecutionThread(KernelMode, TRUE, &delay);
+        // delay.QuadPart = -10 * TOUCH_DELAY_TO_COMMUNICATE;
+        // KeDelayExecutionThread(KernelMode, TRUE, &delay);
 
-        Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Done");
+        // Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Done");
     }
 
     //
@@ -495,6 +502,11 @@ OnPrepareHardware(
     // Start the controller
     //
     status = TchStartDevice(devContext->TouchContext, &devContext->I2CContext);
+
+    Trace(
+        TRACE_LEVEL_ERROR,
+        TRACE_REPORTING,
+        "Touch device - Start");
 
     if (!NT_SUCCESS(status))
     {

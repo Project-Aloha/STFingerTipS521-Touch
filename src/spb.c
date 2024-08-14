@@ -24,7 +24,90 @@
 #include "spb.h"
 #include <spb.tmh>
 
-#define I2C_VERBOSE_LOGGING 0
+#define I2C_VERBOSE_LOGGING 1
+
+/*
+ * FingerTipS-Touch I2C API
+*/
+NTSTATUS
+FtsWrite(
+    IN SPB_CONTEXT* SpbContext,
+    IN PVOID Data,
+    IN ULONG Length
+)
+{
+    WDF_MEMORY_DESCRIPTOR  inMemoryDescriptor;
+    ULONG_PTR  bytesWritten = (ULONG_PTR)NULL;
+    NTSTATUS status;
+
+
+    WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&inMemoryDescriptor,
+        Data,
+        Length);
+
+    status = WdfIoTargetSendWriteSynchronously(
+        SpbContext->SpbIoTarget,
+        NULL,
+        &inMemoryDescriptor,
+        NULL,
+        NULL,
+        &bytesWritten
+    );
+    return status;
+}
+
+
+NTSTATUS
+FtsWriteReadU8UX(
+    IN SPB_CONTEXT* SpbContext,
+    IN PVOID pInputBuffer,
+    IN PVOID pOutputBuffer,
+    IN ULONG inputLength,
+    IN ULONG outputLength
+)
+{
+    WDF_MEMORY_DESCRIPTOR  inMemoryDescriptor;
+    WDF_MEMORY_DESCRIPTOR  outMemoryDescriptor;
+    ULONG_PTR  bytesWritten = (ULONG_PTR)NULL;
+    ULONG_PTR  bytesRead = (ULONG_PTR)NULL;
+    NTSTATUS status;
+
+
+    WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&inMemoryDescriptor,
+        pInputBuffer,
+        inputLength);
+
+    status = WdfIoTargetSendWriteSynchronously(
+        SpbContext->SpbIoTarget,
+        NULL,
+        &inMemoryDescriptor,
+        NULL,
+        NULL,
+        &bytesWritten);
+    if (!NT_SUCCESS(status))
+    {
+        Trace(
+            TRACE_LEVEL_ERROR,
+            TRACE_SPB,
+            "Error writing to Spb - 0x%08lX",
+            status);
+    }
+
+
+    WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&outMemoryDescriptor,
+        pOutputBuffer,
+        outputLength);
+
+    status = WdfIoTargetSendReadSynchronously(
+        SpbContext->SpbIoTarget,
+        NULL,
+        &outMemoryDescriptor,
+        NULL,
+        NULL,
+        &bytesRead
+    );
+    return status;
+}
 
 NTSTATUS
 SpbDoWriteDataSynchronously(

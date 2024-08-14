@@ -4,11 +4,11 @@
 
       Module Name:
 
-            rmiinternal.c
+            ftsinternal.c
 
       Abstract:
 
-            Contains Synaptics initialization code
+            Contains FingerTipS521 initialization code
 
       Environment:
 
@@ -19,14 +19,17 @@
 --*/
 
 #include <Cross Platform Shim\compat.h>
-#include <spb.h>
 #include <report.h>
-#include <ft5x\ftinternal.h>
-#include <ftinternal.tmh>
+#include <fts521\ftsinternal.h>
+#include <ftsinternal.tmh>
+
+BYTE FTS521_READ_EVENTS[1] = { 0x86 };
+
+BYTE eventbuf[256];
 
 NTSTATUS
-Ft5xBuildFunctionsTable(
-      IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
+Fts521BuildFunctionsTable(
+      IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
       IN SPB_CONTEXT* SpbContext
 )
 {
@@ -37,8 +40,8 @@ Ft5xBuildFunctionsTable(
 }
 
 NTSTATUS
-Ft5xChangePage(
-      IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
+Fts521ChangePage(
+      IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
       IN SPB_CONTEXT* SpbContext,
       IN int DesiredPage
 )
@@ -51,19 +54,41 @@ Ft5xChangePage(
 }
 
 NTSTATUS
-Ft5xConfigureFunctions(
-      IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
+Fts521ConfigureFunctions(
+      IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
       IN SPB_CONTEXT* SpbContext
 )
 {
-      UNREFERENCED_PARAMETER(SpbContext);
-      UNREFERENCED_PARAMETER(ControllerContext);
+    NTSTATUS status;
+    LARGE_INTEGER delay;
 
-      return STATUS_SUCCESS;
+    FTS521_CONTROLLER_CONTEXT* controller;
+    controller = (FTS521_CONTROLLER_CONTEXT*)ControllerContext;
+
+    BYTE FTS521_LOCKDOWN[3] = { 0xA4, 0x06, 0x70 };
+    status = FtsWrite(SpbContext, FTS521_LOCKDOWN, 3);
+    if (!NT_SUCCESS(status))
+    {
+      Trace(
+          TRACE_LEVEL_ERROR,
+          TRACE_INTERRUPT,
+          "Writing Lockdown code into the IC done");
+    }
+
+    //Active Scan OFF
+    SetScanMode(controller->FxDevice, SpbContext, SCAN_MODE_ACTIVE, 0x00);
+
+    delay.QuadPart = RELATIVE(MILLISECONDS(50));
+    KeDelayExecutionThread(KernelMode, TRUE, &delay);
+
+    //Active Scan ON
+    SetScanMode(controller->FxDevice, SpbContext, SCAN_MODE_ACTIVE, 0x01);
+
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS
-Ft5xGetObjectStatusFromControllerF12(
+Fts521GetObjectStatusFromController(
       IN VOID* ControllerContext,
       IN SPB_CONTEXT* SpbContext,
       IN DETECTED_OBJECTS* Data
@@ -88,28 +113,20 @@ Return Value:
 
 --*/
 {
-      NTSTATUS status;
-      FT5X_CONTROLLER_CONTEXT* controller;
+      NTSTATUS              status;
+      BYTE                  touchType;
+      BYTE                  touchId;
+      int                   remain = 0;
+      int                   x = 0;
+      int                   y = 0;
+      int                   base = 0;
 
-      int i, x, y;
+      FTS521_CONTROLLER_CONTEXT* controller;
+
       PFOCAL_TECH_EVENT_DATA controllerData = NULL;
-      controller = (FT5X_CONTROLLER_CONTEXT*)ControllerContext;
+      controller = (FTS521_CONTROLLER_CONTEXT*)ControllerContext;
 
-      controllerData = ExAllocatePoolWithTag(
-            NonPagedPoolNx,
-            sizeof(FOCAL_TECH_EVENT_DATA),
-            TOUCH_POOL_TAG_F12);
-
-      if (controllerData == NULL)
-      {
-            status = STATUS_INSUFFICIENT_RESOURCES;
-            goto exit;
-      }
-
-      // 
-      // Packets we need is determined by context
-      //
-      status = SpbReadDataSynchronously(SpbContext, 0, controllerData, sizeof(FOCAL_TECH_EVENT_DATA));
+      status = FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, &eventbuf[0], 3, 8);
 
       if (!NT_SUCCESS(status))
       {
@@ -119,43 +136,63 @@ Return Value:
                   "Error reading finger status data - 0x%08lX",
                   status);
 
-            goto free_buffer;
+            goto exit;
       }
 
-      BYTE X_MSB = 0;
-      BYTE X_LSB = 0;
-      BYTE Y_MSB = 0;
-      BYTE Y_LSB = 0;
-
-      for (i = 0; i < controllerData->NumberOfTouchPoints; i++)
+      remain = eventbuf[7];
+      if (remain > 0)
       {
-            X_MSB = controllerData->TouchData[i].PositionX_High;
-            X_LSB = controllerData->TouchData[i].PositionX_Low;
-            Y_MSB = controllerData->TouchData[i].PositionY_High;
-            Y_LSB = controllerData->TouchData[i].PositionY_Low;
-
-            Data->States[i] = OBJECT_STATE_FINGER_PRESENT_WITH_ACCURATE_POS;
-
-            x = (X_MSB << 8) | X_LSB;
-            y = (Y_MSB << 8) | Y_LSB;
-
-            Data->Positions[i].X = x;
-            Data->Positions[i].Y = y;
+            FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, &eventbuf[8], 3, 10);
       }
 
-free_buffer:
-      ExFreePoolWithTag(
-            controllerData,
-            TOUCH_POOL_TAG_F12
-      );
+      for (int i = 0; i < remain+1 ; i++)
+      {
+            base = i * 8;
 
+            touchType = eventbuf[base + 1] & 0x0F;
+            touchId = (eventbuf[base + 1] & 0xF0) >> 4;
+
+            x = ((eventbuf[base + 3] & 0x0F) << 8) | (eventbuf[base + 2]);
+            y = (eventbuf[base + 4] << 4) | ((eventbuf[base + 3] & 0xF0) >> 4);
+
+            /* event[0] */
+            switch (eventbuf[base + 0])
+            {
+                  case EVT_ID_NOEVENT:
+                  /*
+                  * If there is no event, then do not input its xy coordinates.
+                  */
+                        break;
+                  case EVT_ID_ENTER_POINT:
+                  case EVT_ID_MOTION_POINT:
+                        Data->States[touchId] = OBJECT_STATE_FINGER_PRESENT_WITH_ACCURATE_POS;
+                        break;
+                  case EVT_ID_LEAVE_POINT:
+                        Data->States[touchId] = OBJECT_STATE_NOT_PRESENT;
+                        break;
+            }
+        
+            Data->Positions[touchId].X = x;
+            Data->Positions[touchId].Y = y;
+
+            /* event[1]
+            *  TODO: Need to complete the handling methods for the 
+            *        following errors in the future.
+            */
+            switch (eventbuf[i * 8 + 1])
+            {
+                  case EVT_TYPE_ERROR_ESD:
+                  case EVT_TYPE_ERROR_WATCHDOG:
+                        break;
+            }
+      }
 exit:
       return status;
 }
 
 NTSTATUS
 TchServiceObjectInterrupts(
-      IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
+      IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
       IN SPB_CONTEXT* SpbContext,
       IN PREPORT_CONTEXT ReportContext
 )
@@ -168,7 +205,8 @@ TchServiceObjectInterrupts(
       //
       // See if new touch data is available
       //
-      status = Ft5xGetObjectStatusFromControllerF12(
+
+      status = Fts521GetObjectStatusFromController(
             ControllerContext,
             SpbContext,
             &data
@@ -206,8 +244,8 @@ exit:
 
 
 NTSTATUS
-Ft5xServiceInterrupts(
-      IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
+Fts521ServiceInterrupts(
+      IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
       IN SPB_CONTEXT* SpbContext,
       IN PREPORT_CONTEXT ReportContext
 )
@@ -220,8 +258,8 @@ Ft5xServiceInterrupts(
 }
 
 NTSTATUS
-Ft5xSetReportingFlagsF12(
-    IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
+Fts521SetReportingFlags(
+    IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
     IN SPB_CONTEXT* SpbContext,
     IN UCHAR NewMode,
     OUT UCHAR* OldMode
@@ -236,8 +274,8 @@ Ft5xSetReportingFlagsF12(
 }
 
 NTSTATUS
-Ft5xChangeChargerConnectedState(
-    IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
+Fts521ChangeChargerConnectedState(
+    IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
     IN SPB_CONTEXT* SpbContext,
     IN UCHAR ChargerConnectedState
 )
@@ -250,8 +288,8 @@ Ft5xChangeChargerConnectedState(
 }
 
 NTSTATUS
-Ft5xChangeSleepState(
-    IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
+Fts521ChangeSleepState(
+    IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
     IN SPB_CONTEXT* SpbContext,
     IN UCHAR SleepState
 )
@@ -264,20 +302,8 @@ Ft5xChangeSleepState(
 }
 
 NTSTATUS
-Ft5xGetFirmwareVersion(
-    IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
-    IN SPB_CONTEXT* SpbContext
-)
-{
-      UNREFERENCED_PARAMETER(SpbContext);
-      UNREFERENCED_PARAMETER(ControllerContext);
-
-      return STATUS_SUCCESS;
-}
-
-NTSTATUS
-Ft5xCheckInterrupts(
-    IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
+Fts521CheckInterrupts(
+    IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
     IN SPB_CONTEXT* SpbContext,
     IN ULONG* InterruptStatus
 )
@@ -290,8 +316,8 @@ Ft5xCheckInterrupts(
 }
 
 NTSTATUS
-Ft5xConfigureInterruptEnable(
-    IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
+Fts521ConfigureInterruptEnable(
+    IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
     IN SPB_CONTEXT* SpbContext
 )
 {

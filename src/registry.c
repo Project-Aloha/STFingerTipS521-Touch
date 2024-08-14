@@ -21,7 +21,7 @@
 
 --*/
 
-#include <ft5x\ftinternal.h>
+#include <fts521\ftsinternal.h>
 #include <registry.tmh>
 #include <internal.h>
 
@@ -34,14 +34,14 @@
 #define TOUCH_SCREEN_SETTINGS_FF_SUB_KEY L"Settings\\FF"
 
 //
-// Default FT5X configuration values can be changed here. Please refer to the
-// FT5X specification for a full description of the fields and value meanings
+// Default FTS521 configuration values can be changed here. Please refer to the
+// FTS521 specification for a full description of the fields and value meanings
 //
 
-static FT5X_CONFIGURATION gDefaultConfiguration =
+static FTS521_CONFIGURATION gDefaultConfiguration =
 {
     //
-    // FT5X F01 - Device control settings
+    // FTS521 F01 - Device control settings
     //
     {
         0,                                              // Sleep Mode (normal)
@@ -49,13 +49,13 @@ static FT5X_CONFIGURATION gDefaultConfiguration =
         0,                                              // Report Rate (standard)
         1,                                              // Configured
         0xff,                                           // Interrupt Enable
-        FT5X_MILLISECONDS_TO_TENTH_MILLISECONDS(20),    // Doze Interval
+        FTS521_MILLISECONDS_TO_TENTH_MILLISECONDS(20),    // Doze Interval
         10,                                             // Doze Threshold
-        FT5X_SECONDS_TO_HALF_SECONDS(2)                 // Doze Holdoff
+        FTS521_SECONDS_TO_HALF_SECONDS(2)                 // Doze Holdoff
     },
 
     //
-    // FT5X F11 - 2D Touchpad sensor settings
+    // FTS521 F11 - 2D Touchpad sensor settings
     //
     {
         1,                                              // Reporting mode (throttle)
@@ -1790,17 +1790,17 @@ TchRegistryGetControllerSettings(
 
 --*/
 {
-    FT5X_CONTROLLER_CONTEXT* controller;
+    FTS521_CONTROLLER_CONTEXT* controller;
     NTSTATUS status;
 
     UNREFERENCED_PARAMETER(FxDevice);
 
-    controller = (FT5X_CONTROLLER_CONTEXT*)ControllerContext;
+    controller = (FTS521_CONTROLLER_CONTEXT*)ControllerContext;
 
     RtlCopyMemory(
         &controller->Config,
         &gDefaultConfiguration,
-        sizeof(FT5X_CONFIGURATION));
+        sizeof(FTS521_CONFIGURATION));
 
     status = STATUS_SUCCESS;
 

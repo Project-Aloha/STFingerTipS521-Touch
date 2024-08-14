@@ -9,7 +9,7 @@
 
 	Abstract:
 
-		Contains FocalTech specific code for reporting samples
+		Contains FingerTipS specific code for reporting samples
 
 	Environment:
 

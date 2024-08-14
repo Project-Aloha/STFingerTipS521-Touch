@@ -149,8 +149,13 @@ Return Value:
         // them to go into idle
         //
 
-        status = TchProcessIdleRequest(device, Request, &requestPending);
-        break;
+        // Please note:
+        // FingerTipS-Touch521 touch chip power management and IRQ still have 
+        // issues, so keep it on and do not send idle notification requests 
+        // to change IRQ and power status.
+
+        // status = TchProcessIdleRequest(device, Request, &requestPending);
+        // break;
 
     case IOCTL_HID_WRITE_REPORT:
         //

@@ -57,5 +57,5 @@
 // end_wpp
 //
 
-//#define Trace(LEVEL, FLAGS, MSG, ...) \
-//    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "FocalTechTouch: " MSG "\n", __VA_ARGS__);
+#define Trace(LEVEL, FLAGS, MSG, ...) \
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "FingerTipS521-Touch: " MSG "\n", __VA_ARGS__);
