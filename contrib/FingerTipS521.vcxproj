@@ -444,7 +444,7 @@
     <ClInclude Include="..\include\Cross Platform Shim\bitops.h" />
     <ClInclude Include="..\include\Cross Platform Shim\compat.h" />
     <ClInclude Include="..\include\Cross Platform Shim\hweight.h" />
-    <ClInclude Include="..\Include\fts521\ftsinternal.h" />
+    <ClInclude Include="..\include\fts521\ftsinternal.h" />
     <ClInclude Include="..\include\report.h" />
     <ClInclude Include="..\include\touch_power\public.h" />
     <ClInclude Include="..\include\touch_power\touch_power.h" />

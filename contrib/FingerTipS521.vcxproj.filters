@@ -162,7 +162,7 @@
     <ClInclude Include="..\include\report.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\fts521\ftsinternal.h">
+    <ClInclude Include="..\include\fts521\ftsinternal.h">
       <Filter>Header Files\fts521</Filter>
     </ClInclude>
   </ItemGroup>
