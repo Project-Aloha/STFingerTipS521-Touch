@@ -1,20 +1,20 @@
 /*++
-    Copyright (c) Microsoft Corporation. All Rights Reserved. 
-    Sample code. Dealpoint ID #843729.
+	Copyright (c) Microsoft Corporation. All Rights Reserved. 
+	Sample code. Dealpoint ID #843729.
 
-    Module Name: 
+	Module Name: 
 
-        spb.h
+		spb.h
 
-    Abstract:
+	Abstract:
 
-        This module contains the touch driver I2C helper definitions.
+		This module contains the touch driver I2C helper definitions.
 
-    Environment:
+	Environment:
  
-        Kernel Mode
+		Kernel Mode
 
-    Revision History:
+	Revision History:
 
 --*/
 
@@ -31,53 +31,53 @@
 
 typedef struct _SPB_CONTEXT
 {
-    WDFIOTARGET SpbIoTarget;
-    LARGE_INTEGER I2cResHubId;
-    WDFMEMORY WriteMemory;
-    WDFMEMORY ReadMemory;
-    WDFWAITLOCK SpbLock;
+	WDFIOTARGET SpbIoTarget;
+	LARGE_INTEGER I2cResHubId;
+	WDFMEMORY WriteMemory;
+	WDFMEMORY ReadMemory;
+	WDFWAITLOCK SpbLock;
 } SPB_CONTEXT;
 
 NTSTATUS 
 SpbReadDataSynchronously(
-    IN SPB_CONTEXT* SpbContext,
-    IN UCHAR Address,
-    _In_reads_bytes_(Length) PVOID Data,
-    IN ULONG Length
-    );
+	IN SPB_CONTEXT* SpbContext,
+	IN UCHAR Address,
+	_In_reads_bytes_(Length) PVOID Data,
+	IN ULONG Length
+	);
 
 VOID
 SpbTargetDeinitialize(
-    IN WDFDEVICE FxDevice,
-    IN SPB_CONTEXT *SpbContext
-    );
+	IN WDFDEVICE FxDevice,
+	IN SPB_CONTEXT *SpbContext
+	);
 
 NTSTATUS
 SpbTargetInitialize(
-    IN WDFDEVICE FxDevice,
-    IN SPB_CONTEXT *SpbContext
-    );
+	IN WDFDEVICE FxDevice,
+	IN SPB_CONTEXT *SpbContext
+	);
 
 NTSTATUS
 SpbWriteDataSynchronously(
-    IN SPB_CONTEXT *SpbContext,
-    IN UCHAR Address,
-    IN PVOID Data,
-    IN ULONG Length
-    );
+	IN SPB_CONTEXT *SpbContext,
+	IN UCHAR Address,
+	IN PVOID Data,
+	IN ULONG Length
+	);
 
 NTSTATUS
 FtsWriteReadU8UX(
-    IN SPB_CONTEXT *SpbContext,
-    IN PVOID pInputBuffer,
-    IN PVOID pOutputBuffer,
-    IN ULONG inputLength,
-    IN ULONG outputLength
+	IN SPB_CONTEXT *SpbContext,
+	IN PVOID pInputBuffer,
+	IN PVOID pOutputBuffer,
+	IN ULONG inputLength,
+	IN ULONG outputLength
 );
 
 NTSTATUS
 FtsWrite(
-    IN SPB_CONTEXT* SpbContext,
-    IN PVOID Data,
-    IN ULONG Length
+	IN SPB_CONTEXT* SpbContext,
+	IN PVOID Data,
+	IN ULONG Length
 );

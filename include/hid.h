@@ -60,7 +60,7 @@ typedef struct _HID_TOUCH_FINGER {
 
 typedef struct _HID_TOUCH_REPORT {
 	HID_TOUCH_FINGER Contacts[2];
-	UCHAR            ContactCount;
+	UCHAR			ContactCount;
 } HID_TOUCH_REPORT, * PHID_TOUCH_REPORT;
 
 // REPORTID_KEYPAD
@@ -122,52 +122,52 @@ TchSendReport(
 
 NTSTATUS
 TchGetDeviceAttributes(
-    IN WDFREQUEST Request
-    );
+	IN WDFREQUEST Request
+	);
 
 NTSTATUS 
 TchGetFeatureReport(
-    IN WDFDEVICE Device,
-    IN WDFREQUEST Request
-    );
+	IN WDFDEVICE Device,
+	IN WDFREQUEST Request
+	);
 
 NTSTATUS
 TchGetHidDescriptor(
-    IN WDFDEVICE Device,
-    IN WDFREQUEST Request
-    );
+	IN WDFDEVICE Device,
+	IN WDFREQUEST Request
+	);
 
 NTSTATUS
 TchGetReportDescriptor(
-    IN WDFDEVICE Device,
-    IN WDFREQUEST Request
-    );
+	IN WDFDEVICE Device,
+	IN WDFREQUEST Request
+	);
 
 NTSTATUS 
 TchGetString(
-    IN WDFDEVICE Device,
-    IN WDFREQUEST Request
-    );
+	IN WDFDEVICE Device,
+	IN WDFREQUEST Request
+	);
 
 NTSTATUS
 TchProcessIdleRequest(
-    IN  WDFDEVICE Device,
-    IN  WDFREQUEST Request,
-    OUT BOOLEAN *Pending
-    );
+	IN  WDFDEVICE Device,
+	IN  WDFREQUEST Request,
+	OUT BOOLEAN *Pending
+	);
 
 NTSTATUS 
 TchSetFeatureReport(
-    IN WDFDEVICE Device,
-    IN WDFREQUEST Request
-    );
-    
+	IN WDFDEVICE Device,
+	IN WDFREQUEST Request
+	);
+	
 NTSTATUS 
 TchReadReport(
-    IN  WDFDEVICE Device,
-    IN  WDFREQUEST Request,
-    OUT BOOLEAN *Pending
-    );
+	IN  WDFDEVICE Device,
+	IN  WDFREQUEST Request,
+	OUT BOOLEAN *Pending
+	);
 
 //
 // HID collections
@@ -177,7 +177,7 @@ TchReadReport(
 #define X_MASK 0x38, 0x04
 #define Y_MASK 0x24, 0x09
 
-#define FINGERTIPS_FTS521_FINGER_CONTACT_1 \
+#define ST_FTS521_FINGER_CONTACT_1 \
 	BEGIN_COLLECTION, 0x02, /* Collection (Logical) */ \
 		USAGE, 0x42, /* Usage (Tip Switch) */ \
 		LOGICAL_MINIMUM, 0x00, /* Logical Minimum (0) */ \
@@ -205,7 +205,7 @@ TchReadReport(
 		INPUT, 0x02, /* Input: (Data, Var, Abs) */ \
 	END_COLLECTION /* End Collection */
 
-#define FINGERTIPS_FTS521_FINGER_CONTACT_2 \
+#define ST_FTS521_FINGER_CONTACT_2 \
 	BEGIN_COLLECTION, 0x02, /* Collection (Logical) */ \
 		USAGE_PAGE, 0x0D, /* Usage Page (Digitizer) */ \
 		USAGE, 0x42, /* Usage (Tip Switch) */ \
@@ -232,15 +232,15 @@ TchReadReport(
 		INPUT, 0x02, /* Input: (Data, Var, Abs) */ \
 	END_COLLECTION /* End Collection */
 
-#define FINGERTIPS_FTS521_FINGER \
+#define ST_FTS521_FINGER \
 	USAGE_PAGE, 0x0D, /* Usage Page (Digitizer) */ \
 	USAGE, 0x04, /* Usage (Touch Screen) */ \
 	BEGIN_COLLECTION, 0x01, /* Collection (Application) */ \
 		REPORT_ID, REPORTID_FINGER, /* Report ID (1) */ \
 		USAGE, 0x22, /* Usage (Finger) */ \
-		FINGERTIPS_FTS521_FINGER_CONTACT_1, /* Finger Contact (1) */ \
+		ST_FTS521_FINGER_CONTACT_1, /* Finger Contact (1) */ \
 		USAGE, 0x00, /* Usage (Undefined) */ \
-		FINGERTIPS_FTS521_FINGER_CONTACT_2, /* Finger Contact (2) */ \
+		ST_FTS521_FINGER_CONTACT_2, /* Finger Contact (2) */ \
 		USAGE_PAGE, 0x0D, /* Usage Page (Digitizer) */ \
 		USAGE, 0x54, /* Usage (Contact Count) */ \
 		REPORT_SIZE, 0x08, /* Report Size (8) */ \
@@ -259,7 +259,7 @@ TchReadReport(
 		FEATURE, 0x02, \
 	END_COLLECTION /* End Collection */
 
-#define FINGERTIPS_FTS521_DIGITIZER_STYLUS_CONTACT_1 \
+#define ST_FTS521_DIGITIZER_STYLUS_CONTACT_1 \
 	BEGIN_COLLECTION, 0x00, /* Collection (Physical) */ \
 		USAGE, 0x42, /* Usage (Tip Switch) */ \
 		LOGICAL_MINIMUM, 0x00, /* Logical Minimum (0) */ \
@@ -310,13 +310,13 @@ TchReadReport(
 		UNIT, 0x00, /* Unit: None */ \
 	END_COLLECTION /* End Collection */
 
-#define FINGERTIPS_FTS521_DIGITIZER_STYLUS \
+#define ST_FTS521_DIGITIZER_STYLUS \
 	USAGE_PAGE, 0x0D, /* Usage Page (Digitizer) */ \
 	USAGE, 0x02, /* Usage (Pen) */ \
 	BEGIN_COLLECTION, 0x01, /* Collection (Application) */ \
 		REPORT_ID, REPORTID_STYLUS, /* Report ID (11) */ \
 		USAGE, 0x20, /* Usage (Stylus) */ \
-		FINGERTIPS_FTS521_DIGITIZER_STYLUS_CONTACT_1, /* Stylus (1) */ \
+		ST_FTS521_DIGITIZER_STYLUS_CONTACT_1, /* Stylus (1) */ \
 		USAGE_PAGE_1, 0x00, 0xff, \
 		REPORT_ID, REPORTID_PENHQA, \
 		USAGE, 0xc5, \
@@ -327,7 +327,7 @@ TchReadReport(
 		FEATURE, 0x02, \
 	END_COLLECTION /* End Collection */
 
-#define FINGERTIPS_FTS521_DIGITIZER_DIAGNOSTIC1 \
+#define ST_FTS521_DIGITIZER_DIAGNOSTIC1 \
 	USAGE_PAGE_1, 0x05, 0xFF, /* Usage Page (Vendor Defined 0xFF05) */ \
 	USAGE, 0x01, /* Usage (0x01) */ \
 	BEGIN_COLLECTION, 0x01, /* Collection (Application) */ \
@@ -347,7 +347,7 @@ TchReadReport(
 		FEATURE, 0x02, /* Feature: (Data, Var, Abs) */ \
 	END_COLLECTION /* End Collection */
 
-#define FINGERTIPS_FTS521_DIGITIZER_DIAGNOSTIC2 \
+#define ST_FTS521_DIGITIZER_DIAGNOSTIC2 \
 	USAGE_PAGE_1, 0x05, 0xFF, /* Usage Page (Vendor Defined 0xFF05) */ \
 	USAGE, 0x02, /* Usage (0x02) */ \
 	BEGIN_COLLECTION, 0x01, /* Collection (Application) */ \
@@ -363,7 +363,7 @@ TchReadReport(
 		INPUT, 0x02, /* Input: (Data, Var, Abs) */ \
 	END_COLLECTION /* End Collection */
 
-#define FINGERTIPS_FTS521_DIGITIZER_DIAGNOSTIC3 \
+#define ST_FTS521_DIGITIZER_DIAGNOSTIC3 \
 	USAGE_PAGE_1, 0x05, 0xFF, /* Usage Page (Vendor Defined 0xFF05) */ \
 	USAGE, 0x03, /* Usage (0x03) */ \
 	BEGIN_COLLECTION, 0x01, /* Collection (Application) */ \
@@ -379,7 +379,7 @@ TchReadReport(
 		INPUT, 0x02, /* Input: (Data, Var, Abs) */ \
 	END_COLLECTION /* End Collection */
 
-#define FINGERTIPS_FTS521_DIGITIZER_DIAGNOSTIC4 \
+#define ST_FTS521_DIGITIZER_DIAGNOSTIC4 \
 	USAGE_PAGE_1, 0x05, 0xFF, /* Usage Page (Vendor Defined 0xFF05) */ \
 	USAGE, 0x04, /* Usage (0x04) */ \
 	BEGIN_COLLECTION, 0x01, /* Collection (Application) */ \
@@ -400,7 +400,7 @@ TchReadReport(
 	END_COLLECTION /* End Collection */
 
 
-#define FINGERTIPS_FTS521_DIGITIZER_REPORTMODE \
+#define ST_FTS521_DIGITIZER_REPORTMODE \
 	USAGE_PAGE, 0x0D, /* Usage Page (Digitizer) */ \
 	USAGE, 0x0E, /* Usage (Configuration) */ \
 	BEGIN_COLLECTION, 0x01, /* Collection (Application) */ \
@@ -422,7 +422,7 @@ TchReadReport(
 		END_COLLECTION, /* End Collection */ \
 	END_COLLECTION /* End Collection */
 
-#define FINGERTIPS_FTS521_DIGITIZER_KEYPAD \
+#define ST_FTS521_DIGITIZER_KEYPAD \
 	USAGE_PAGE, 0x01, /* Usage Page (Generic Desktop Ctrls) */ \
 	USAGE, 0x0D, /* Usage (Portable Device Control) */ \
 	BEGIN_COLLECTION, 0x01, /* Collection (Application) */ \

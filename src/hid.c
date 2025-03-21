@@ -23,32 +23,32 @@
 #include <Cross Platform Shim\compat.h>
 #include <internal.h>
 #include <controller.h>
-#include <fts521\ftsinternal.h>
+#include <fts521\fts521internal.h>
 #include <hid.h>
 #include <hid.tmh>
 
-const USHORT gOEMVendorID = 0x6674;    // "ft"
-const USHORT gOEMProductID = 0x3578;    // "5x"
-const USHORT gOEMVersionID = 3200;
+const USHORT gOEMVendorID = 0x7379;    // "sy"
+const USHORT gOEMProductID = 0x726D;    // "rm"
+const USHORT gOEMVersionID = 3708;
 
-const PWSTR gpwstrManufacturerID = L"FingerTipS 521";
+const PWSTR gpwstrManufacturerID = L"STFingerTipS";
 const PWSTR gpwstrProductID = L"FTS521";
-const PWSTR gpwstrSerialNumber = L"FTS521";
+const PWSTR gpwstrSerialNumber = L"V521";
 
 //
 // HID Report Descriptor for a touch device
 //
 
 const UCHAR gReportDescriptor[] = {
-//	FINGERTIPS_FTS521_DIGITIZER_DIAGNOSTIC1,
-//	FINGERTIPS_FTS521_DIGITIZER_DIAGNOSTIC2,
-//	FINGERTIPS_FTS521_DIGITIZER_DIAGNOSTIC3,
-//	FINGERTIPS_FTS521_DIGITIZER_DIAGNOSTIC4,
-	FINGERTIPS_FTS521_FINGER
-//	FINGERTIPS_FTS521_DIGITIZER_REPORTMODE,
-//	FINGERTIPS_FTS521_DIGITIZER_KEYPAD,
-//	FINGERTIPS_FTS521_DIGITIZER_STYLUS
-};
+	//	ST_FTS521_DIGITIZER_DIAGNOSTIC1,
+	//	ST_FTS521_DIGITIZER_DIAGNOSTIC2,
+	//	ST_FTS521_DIGITIZER_DIAGNOSTIC3,
+	//	ST_FTS521_DIGITIZER_DIAGNOSTIC4,
+		ST_FTS521_FINGER
+	//	ST_FTS521_DIGITIZER_REPORTMODE,
+	//	ST_FTS521_DIGITIZER_KEYPAD,
+	//	ST_FTS521_DIGITIZER_STYLUS
+	};
 const ULONG gdwcbReportDescriptor = sizeof(gReportDescriptor);
 
 //
@@ -77,6 +77,11 @@ TchSendReport(
 	WDFREQUEST request;
 	PHID_INPUT_REPORT hidReportRequestBuffer;
 	size_t hidReportRequestBufferLength;
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchSendReport - Entry");
 
 	status = STATUS_SUCCESS;
 	request = NULL;
@@ -123,12 +128,6 @@ TchSendReport(
 			"Confidence = %d, "
 			"Contact ID = %d, "
 			"X = %d, "
-			"Y = %d \n"
-			"Tip Switch = %d, "
-			"In Range = %d, "
-			"Confidence = %d, "
-			"Contact ID = %d, "
-			"X = %d, "
 			"Y = %d",
 			hidReportFromDriver->TouchReport.ContactCount,
 			hidReportFromDriver->TouchReport.Contacts[0].TipSwitch,
@@ -136,13 +135,7 @@ TchSendReport(
 			hidReportFromDriver->TouchReport.Contacts[0].Confidence,
 			hidReportFromDriver->TouchReport.Contacts[0].ContactID,
 			hidReportFromDriver->TouchReport.Contacts[0].X,
-			hidReportFromDriver->TouchReport.Contacts[0].Y,
-			hidReportFromDriver->TouchReport.Contacts[1].TipSwitch,
-			hidReportFromDriver->TouchReport.Contacts[1].InRange,
-			hidReportFromDriver->TouchReport.Contacts[1].Confidence,
-			hidReportFromDriver->TouchReport.Contacts[1].ContactID,
-			hidReportFromDriver->TouchReport.Contacts[1].X,
-			hidReportFromDriver->TouchReport.Contacts[1].Y);
+			hidReportFromDriver->TouchReport.Contacts[0].Y);
 		break;
 	}
 	case REPORTID_KEYPAD:
@@ -227,6 +220,11 @@ TchSendReport(
 	WdfRequestComplete(request, status);
 
 exit:
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchSendReport - Exit - 0x%08lX",
+		status);
 	return status;
 }
 
@@ -259,6 +257,11 @@ Return Value:
 {
 	PDEVICE_EXTENSION devContext;
 	NTSTATUS status;
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchReadReport - Entry");
 
 	devContext = GetDeviceContext(Device);
 
@@ -298,6 +301,12 @@ Return Value:
 
 exit:
 
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchReadReport - Exit - 0x%08lX",
+		status);
+
 	return status;
 }
 
@@ -332,6 +341,11 @@ Return Value:
 
 	UNREFERENCED_PARAMETER(Device);
 
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchGetString - Entry");
+
 	status = STATUS_SUCCESS;
 
 	irp = WdfRequestWdmGetIrp(Request);
@@ -340,18 +354,42 @@ Return Value:
 		0xffff)
 	{
 	case HID_STRING_ID_IMANUFACTURER:
+
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_HID,
+			"Manufacturer ID requested");
+
 		strId = gpwstrManufacturerID;
 		break;
 
 	case HID_STRING_ID_IPRODUCT:
+
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_HID,
+			"Product ID requested");
+
 		strId = gpwstrProductID;
 		break;
 
 	case HID_STRING_ID_ISERIALNUMBER:
+
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_HID,
+			"Serial number requested");
+
 		strId = gpwstrSerialNumber;
 		break;
 
 	default:
+
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_HID,
+			"Error getting device string - Invalid string ID");
+
 		strId = NULL;
 		break;
 	}
@@ -380,6 +418,12 @@ Return Value:
 			status);
 	}
 
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchGetString - Exit - 0x%08lX",
+		status);
+
 	return status;
 }
 
@@ -392,6 +436,11 @@ TchGenerateHidReportDescriptor(
 	PDEVICE_EXTENSION devContext;
 	FTS521_CONTROLLER_CONTEXT* touchContext;
 	NTSTATUS status;
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchGenerateHidReportDescriptor - Entry");
 
 	devContext = GetDeviceContext(Device);
 
@@ -475,6 +524,13 @@ TchGenerateHidReportDescriptor(
 
 exit:
 	ExFreePoolWithTag((PVOID)hidReportDescBuffer, TOUCH_POOL_TAG);
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchGenerateHidReportDescriptor - Exit - 0x%08lX",
+		status);
+
 	return status;
 }
 
@@ -506,6 +562,11 @@ Return Value:
 	NTSTATUS status;
 
 	UNREFERENCED_PARAMETER(Device);
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchGetHidDescriptor - Entry");
 
 	//
 	// This IOCTL is METHOD_NEITHER so WdfRequestRetrieveOutputMemory
@@ -554,6 +615,12 @@ Return Value:
 
 exit:
 
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchGetHidDescriptor - Exit - 0x%08lX",
+		status);
+
 	return status;
 }
 
@@ -586,6 +653,11 @@ Return Value:
 {
 	WDFMEMORY memory;
 	NTSTATUS status;
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchGetReportDescriptor - Entry");
 
 	//
 	// This IOCTL is METHOD_NEITHER so WdfRequestRetrieveOutputMemory
@@ -633,6 +705,12 @@ Return Value:
 
 exit:
 
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchGetReportDescriptor - Exit - 0x%08lX",
+		status);
+
 	return status;
 }
 
@@ -658,6 +736,11 @@ Return Value:
 {
 	PHID_DEVICE_ATTRIBUTES deviceAttributes;
 	NTSTATUS status;
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchGetDeviceAttributes - Entry");
 
 	//
 	// This IOCTL is METHOD_NEITHER so WdfRequestRetrieveOutputMemory
@@ -696,6 +779,12 @@ Return Value:
 
 exit:
 
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"TchGetDeviceAttributes - Exit - 0x%08lX",
+		status);
+
 	return status;
 }
 
@@ -725,6 +814,11 @@ Return Value:
 	PHID_XFER_PACKET featurePacket;
 	WDF_REQUEST_PARAMETERS params;
 	NTSTATUS status;
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_DRIVER,
+		"TchSetFeatureReport - Entry");
 
 	devContext = GetDeviceContext(Device);
 	status = STATUS_SUCCESS;
@@ -767,6 +861,21 @@ Return Value:
 		);
 
 		PPTP_DEVICE_INPUT_MODE_REPORT DeviceInputMode = (PPTP_DEVICE_INPUT_MODE_REPORT) featurePacket->reportBuffer;
+
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Report REPORTID_REPORTMODE requested mode %d",
+			DeviceInputMode->Mode
+		);
+
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Report REPORTID_REPORTMODE requested device ID %d",
+			DeviceInputMode->DeviceID
+		);
+
 		switch (DeviceInputMode->Mode)
 		{
 		case PTP_COLLECTION_MOUSE:
@@ -792,6 +901,16 @@ Return Value:
 			devContext->PtpInputOn = TRUE;
 			break;
 		}
+		default:
+		{
+			Trace(
+				TRACE_LEVEL_INFORMATION,
+				TRACE_DRIVER,
+				"%!FUNC! Report REPORTID_REPORTMODE requested unknown mode"
+			);
+			//status = STATUS_INVALID_PARAMETER;
+			//goto exit;
+		}
 		}
 
 		Trace(
@@ -816,6 +935,12 @@ Return Value:
 	}
 
 exit:
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_DRIVER,
+		"TchSetFeatureReport - Exit - 0x%08lX",
+		status);
 
 	return status;
 }
@@ -847,6 +972,11 @@ Return Value:
 	WDF_REQUEST_PARAMETERS params;
 	NTSTATUS status;
 	size_t ReportSize;
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_DRIVER,
+		"TchGetFeatureReport - Entry");
 
 	devContext = GetDeviceContext(Device);
 	status = STATUS_SUCCESS;
@@ -1007,6 +1137,12 @@ Return Value:
 	}
 
 exit:
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_DRIVER,
+		"TchGetFeatureReport - Exit - 0x%08lX",
+		status);
 
 	return status;
 }

@@ -1,22 +1,22 @@
 /*++
-    Copyright (c) Microsoft Corporation. All Rights Reserved.
-    Copyright (c) LumiaWoA authors. All Rights Reserved.
+	Copyright (c) Microsoft Corporation. All Rights Reserved.
+	Copyright (c) LumiaWoA authors. All Rights Reserved.
 
-    Module Name:
+	Module Name:
 
-        power.h
+		power.h
 
-    Abstract:
+	Abstract:
 
-        Contains internal interfaces exposing functionality needed for
-        controller self-tests, which can be used to run HW testing
-        on a device in the manufacturing line, etc.
+		Contains internal interfaces exposing functionality needed for
+		controller self-tests, which can be used to run HW testing
+		on a device in the manufacturing line, etc.
 
-    Environment:
+	Environment:
 
-        Kernel mode
+		Kernel mode
 
-    Revision History:
+	Revision History:
 
 --*/
 
@@ -31,18 +31,18 @@
 
 NTSTATUS
 PowerInitialize(
-    WDFDEVICE Device
+	WDFDEVICE Device
 );
 
 NTSTATUS
 PowerDeInitialize(
-    WDFDEVICE Device
+	WDFDEVICE Device
 );
 
 NTSTATUS
 PowerToggle(
-    TOUCH_POWER_CONTEXT* deviceContext,
-    DWORD State
+	TOUCH_POWER_CONTEXT* deviceContext,
+	DWORD State
 );
 
 DRIVER_NOTIFICATION_CALLBACK_ROUTINE PowerIoRegPnPNotification;
