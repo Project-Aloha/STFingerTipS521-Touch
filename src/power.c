@@ -1,207 +1,221 @@
 /*++
-    Copyright (c) Microsoft Corporation. All Rights Reserved.
-    Copyright (c) Bingxing Wang. All Rights Reserved.
-    Copyright (c) LumiaWoA authors. All Rights Reserved.
+	Copyright (c) Microsoft Corporation. All Rights Reserved.
+	Copyright (c) Bingxing Wang. All Rights Reserved.
+	Copyright (c) LumiaWoA authors. All Rights Reserved.
 
-    Module Name:
+	Module Name:
 
-        power.c
+		power.c
 
-    Abstract:
+	Abstract:
 
-        Contains FingerTipS power-on and power-off functionality
+		Contains FingerTipS power-on and power-off functionality
 
-    Environment:
+	Environment:
 
-        Kernel mode
+		Kernel mode
 
-    Revision History:
+	Revision History:
 
 --*/
 
 #include <Cross Platform Shim\compat.h>
 #include <controller.h>
 #include <spb.h>
-#include <fts521\ftsinternal.h>
+#include <fts521\fts521core.h>
+#include <fts521\fts521internal.h>
+#include <fts521\fts521regs.h>
 #include <internal.h>
 #include <touch_power\touch_power.h>
 #include <power.tmh>
 
 NTSTATUS
 TchPowerSettingCallback(
-    _In_ LPCGUID SettingGuid,
-    _In_ PVOID Value,
-    _In_ ULONG ValueLength,
-    _Inout_opt_ PVOID Context
+	_In_ LPCGUID SettingGuid,
+	_In_ PVOID Value,
+	_In_ ULONG ValueLength,
+	_Inout_opt_ PVOID Context
 )
 {
-    NTSTATUS status = STATUS_SUCCESS;
-    PDEVICE_EXTENSION devContext = NULL;
-    FTS521_CONTROLLER_CONTEXT* ControllerContext = NULL;
-    SPB_CONTEXT* SpbContext = NULL;
+	NTSTATUS status = STATUS_SUCCESS;
+	PDEVICE_EXTENSION devContext = NULL;
+	FTS521_CONTROLLER_CONTEXT* ControllerContext = NULL;
+	SPB_CONTEXT* SpbContext = NULL;
 
-    if (Context == NULL)
-    {
-        Trace(
-            TRACE_LEVEL_ERROR,
-            TRACE_POWER,
-            "TchPowerSettingCallback: Context is NULL"
-        );
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_POWER,
+		"TchPowerSettingCallback - Entry");
 
-        status = STATUS_INVALID_DEVICE_REQUEST;
-        goto exit;
-    }
+	if (Context == NULL)
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_POWER,
+			"TchPowerSettingCallback: Context is NULL"
+		);
 
-    devContext = (PDEVICE_EXTENSION)Context;
-    ControllerContext = (FTS521_CONTROLLER_CONTEXT*)devContext->TouchContext;
-    SpbContext = &(devContext->I2CContext);
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		goto exit;
+	}
 
-    //
-    // Power Source change
-    //
-    if (IsEqualGUID(&GUID_ACDC_POWER_SOURCE, SettingGuid))
-    {
-        Trace(
-            TRACE_LEVEL_INFORMATION,
-            TRACE_POWER,
-            "Power State Change Notification");
+	devContext = (PDEVICE_EXTENSION)Context;
+	ControllerContext = (FTS521_CONTROLLER_CONTEXT*)devContext->TouchContext;
+	SpbContext = &(devContext->I2CContext);
 
-        if (ValueLength != sizeof(DWORD))
-        {
-            Trace(
-                TRACE_LEVEL_ERROR,
-                TRACE_POWER,
-                "TchPowerSettingCallback: Unexpected value size."
-            );
+	//
+	// Power Source change
+	//
+	if (IsEqualGUID(&GUID_ACDC_POWER_SOURCE, SettingGuid))
+	{
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_POWER,
+			"Power State Change Notification");
 
-            status = STATUS_INVALID_DEVICE_REQUEST;
-            goto exit;
-        }
+		if (ValueLength != sizeof(DWORD))
+		{
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_POWER,
+				"TchPowerSettingCallback: Unexpected value size."
+			);
 
-        DWORD PowerState = *(DWORD*)Value;
-        switch (PowerState)
-        {
-        // On Battery
-        case PoAc:
-            Trace(
-                TRACE_LEVEL_INFORMATION,
-                TRACE_POWER,
-                "On Battery Power");
+			status = STATUS_INVALID_DEVICE_REQUEST;
+			goto exit;
+		}
 
-            status = Fts521ChangeChargerConnectedState(
-                ControllerContext,
-                SpbContext,
-                0
-            );
+		DWORD PowerState = *(DWORD*)Value;
+		switch (PowerState)
+		{
+		// On Battery
+		case PoAc:
+			Trace(
+				TRACE_LEVEL_INFORMATION,
+				TRACE_POWER,
+				"On Battery Power");
 
-            if (!NT_SUCCESS(status))
-            {
-                Trace(
-                    TRACE_LEVEL_ERROR,
-                    TRACE_POWER,
-                    "Error Changing Charger Connected state - 0x%08lX",
-                    status);
-                goto exit;
-            }
-            break;
-        // Plugged In
-        case PoDc:
-        case PoHot:
-            Trace(
-                TRACE_LEVEL_INFORMATION,
-                TRACE_POWER,
-                "On External Power");
+			status = Fts521ChangeChargerConnectedState(
+				ControllerContext,
+				SpbContext,
+				0
+			);
 
-            status = Fts521ChangeChargerConnectedState(
-                ControllerContext,
-                SpbContext,
-                1
-            );
+			if (!NT_SUCCESS(status))
+			{
+				Trace(
+					TRACE_LEVEL_ERROR,
+					TRACE_POWER,
+					"Error Changing Charger Connected state - 0x%08lX",
+					status);
+				goto exit;
+			}
+			break;
+		// Plugged In
+		case PoDc:
+		case PoHot:
+			Trace(
+				TRACE_LEVEL_INFORMATION,
+				TRACE_POWER,
+				"On External Power");
 
-            if (!NT_SUCCESS(status))
-            {
-                Trace(
-                    TRACE_LEVEL_ERROR,
-                    TRACE_POWER,
-                    "Error Changing Charger Connected state - 0x%08lX",
-                    status);
-                goto exit;
-            }
-            break;
-        default:
-            Trace(
-                TRACE_LEVEL_ERROR,
-                TRACE_POWER,
-                "Unknown power state - 0x%02X",
-                PowerState);
-        }
-    }
-    else if (IsEqualGUID(&GUID_CONSOLE_DISPLAY_STATE, SettingGuid))
-    {
-        Trace(
-            TRACE_LEVEL_INFORMATION,
-            TRACE_POWER,
-            "Monitor State Change Notification");
+			status = Fts521ChangeChargerConnectedState(
+				ControllerContext,
+				SpbContext,
+				1
+			);
 
-        if (ValueLength != sizeof(DWORD))
-        {
-            Trace(
-                TRACE_LEVEL_ERROR,
-                TRACE_POWER,
-                "TchPowerSettingCallback: Unexpected value size."
-            );
+			if (!NT_SUCCESS(status))
+			{
+				Trace(
+					TRACE_LEVEL_ERROR,
+					TRACE_POWER,
+					"Error Changing Charger Connected state - 0x%08lX",
+					status);
+				goto exit;
+			}
+			break;
+		default:
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_POWER,
+				"Unknown power state - 0x%02X",
+				PowerState);
+		}
+	}
+	else if (IsEqualGUID(&GUID_CONSOLE_DISPLAY_STATE, SettingGuid))
+	{
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_POWER,
+			"Monitor State Change Notification");
 
-            status = STATUS_INVALID_DEVICE_REQUEST;
-            goto exit;
-        }
+		if (ValueLength != sizeof(DWORD))
+		{
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_POWER,
+				"TchPowerSettingCallback: Unexpected value size."
+			);
 
-        DWORD DisplayState = *(DWORD*)Value;
-        DWORD GestureEnabled = 0;
+			status = STATUS_INVALID_DEVICE_REQUEST;
+			goto exit;
+		}
 
-        switch (DisplayState)
-        // Please note:
-        // 1.This method is not applicable to FingerTipS-Touch521 touch 
-        //   chip power management, so do not change its power status.
-        // 2.Meanwhile, keeping the power on will increase power consumption, 
-        //   which is currently an unavoidable issue that we hope to improve 
-        //   in the future
-        {
-        case 0:
-            Trace(
-                TRACE_LEVEL_INFORMATION,
-                TRACE_POWER,
-                "The Display is Off");
+		DWORD DisplayState = *(DWORD*)Value;
+		DWORD GestureEnabled = 0;
 
-            SetScanMode(ControllerContext->FxDevice, SpbContext, SCAN_MODE_LOW_POWER, 0x00);
+		switch (DisplayState)
+		// Please note:
+		// 1.This method is not applicable to FingerTipS-Touch521 touch 
+		//   chip power management, so do not change its power status.
+		// 2.Meanwhile, keeping the power on will increase power consumption, 
+		//   which is currently an unavoidable issue that we hope to improve 
+		//   in the future
+		{
+		case 0:
+			Trace(
+				TRACE_LEVEL_INFORMATION,
+				TRACE_POWER,
+				"The Display is Off");
 
-            break;
-        case 1:
-            Trace(
-                TRACE_LEVEL_INFORMATION,
-                TRACE_POWER,
-                "The Display is On");
+			SetScanMode(SpbContext, SCAN_MODE_LOW_POWER, 0x00);
 
-            SetScanMode(ControllerContext->FxDevice, SpbContext, SCAN_MODE_ACTIVE, 0x01);
+			break;
+		case 1:
+			Trace(
+				TRACE_LEVEL_INFORMATION,
+				TRACE_POWER,
+				"The Display is On");
 
-            break;
-        case 2:
-            Trace(
-                TRACE_LEVEL_INFORMATION,
-                TRACE_POWER,
-                "The Display is Dimmed");
+			SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
 
-            break;
-        default:
-            Trace(
-                TRACE_LEVEL_ERROR,
-                TRACE_POWER,
-                "Unknown display state - 0x%02X",
-                DisplayState);
-        }
-    }
+			break;
+		case 2:
+			Trace(
+				TRACE_LEVEL_INFORMATION,
+				TRACE_POWER,
+				"The Display is Dimmed");
 
-    exit:
-    return status;
+			break;
+		default:
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_POWER,
+				"Unknown display state - 0x%02X",
+				DisplayState);
+		}
+	}
+
+exit:
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_POWER,
+		"TchPowerSettingCallback - Exit - 0x%08lX",
+	status);
+
+	return status;
 }
 
 NTSTATUS 
@@ -226,42 +240,52 @@ Return Value:
    NTSTATUS indicating success or failure
 
 --*/
-{    
-    FTS521_CONTROLLER_CONTEXT* controller;
-    NTSTATUS status;
+{	
+	FTS521_CONTROLLER_CONTEXT* controller;
+	NTSTATUS status;
 
-    controller = (FTS521_CONTROLLER_CONTEXT*) ControllerContext;
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_POWER,
+		"TchWakeDevice - Entry");
 
-    //
-    // Check if we were already on
-    //
-    if (controller->DevicePowerState == PowerDeviceD0)
-    {
-        goto exit;
-    }
+	controller = (FTS521_CONTROLLER_CONTEXT*) ControllerContext;
 
-    controller->DevicePowerState = PowerDeviceD0;
+	//
+	// Check if we were already on
+	//
+	if (controller->DevicePowerState == PowerDeviceD0)
+	{
+		goto exit;
+	}
 
-    //
-    // Attempt to put the controller into operating mode 
-    //
-    status = Fts521ChangeSleepState(
-        controller,
-        SpbContext,
-        FTS521_F01_DEVICE_CONTROL_SLEEP_MODE_OPERATING);
+	controller->DevicePowerState = PowerDeviceD0;
 
-    if (!NT_SUCCESS(status))
-    {
-        Trace(
-            TRACE_LEVEL_ERROR,
-            TRACE_POWER,
-            "Error waking touch controller - 0x%08lX",
-            status);
-    }
+	//
+	// Attempt to put the controller into operating mode 
+	//
+	status = Fts521ChangeSleepState(
+		controller,
+		SpbContext,
+		FTS521_F01_DEVICE_CONTROL_SLEEP_MODE_OPERATING);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_POWER,
+			"Error waking touch controller - 0x%08lX",
+			status);
+	}
 
 exit:
 
-    return STATUS_SUCCESS;
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_POWER,
+		"TchWakeDevice - Exit");
+
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS
@@ -288,49 +312,59 @@ Return Value:
 
 --*/
 {
-    FTS521_CONTROLLER_CONTEXT* controller;
-    NTSTATUS status;
+	FTS521_CONTROLLER_CONTEXT* controller;
+	NTSTATUS status;
 
-    controller = (FTS521_CONTROLLER_CONTEXT*) ControllerContext;
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_POWER,
+		"TchStandbyDevice - Entry");
 
-    //
-    // Interrupts are now disabled but the ISR may still be
-    // executing, so grab the controller lock to ensure ISR
-    // is finished touching HW and controller state.
-    //
-    WdfWaitLockAcquire(controller->ControllerLock, NULL);
+	controller = (FTS521_CONTROLLER_CONTEXT*) ControllerContext;
 
-    //
-    // Put the chip in sleep mode
-    //
-    status = Fts521ChangeSleepState(
-        ControllerContext,
-        SpbContext,
-        FTS521_F01_DEVICE_CONTROL_SLEEP_MODE_SLEEPING);
+	//
+	// Interrupts are now disabled but the ISR may still be
+	// executing, so grab the controller lock to ensure ISR
+	// is finished touching HW and controller state.
+	//
+	WdfWaitLockAcquire(controller->ControllerLock, NULL);
 
-    if (!NT_SUCCESS(status))
-    {
-        Trace(
-            TRACE_LEVEL_ERROR,
-            TRACE_POWER,
-            "Error sleeping touch controller - 0x%08lX",
-            status);
-    }
+	//
+	// Put the chip in sleep mode
+	//
+	status = Fts521ChangeSleepState(
+		ControllerContext,
+		SpbContext,
+		FTS521_F01_DEVICE_CONTROL_SLEEP_MODE_SLEEPING);
 
-    controller->DevicePowerState = PowerDeviceD3;
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_POWER,
+			"Error sleeping touch controller - 0x%08lX",
+			status);
+	}
 
-    //
-    // Invalidate state
-    //
-    ((PREPORT_CONTEXT)ReportContext)->Cache.SlotValid = 0;
-    ((PREPORT_CONTEXT)ReportContext)->Cache.SlotDirty = 0;
-    ((PREPORT_CONTEXT)ReportContext)->Cache.DownCount = 0;
-    ((PREPORT_CONTEXT)ReportContext)->ButtonCache.ButtonSlots[0] = 0;
-    ((PREPORT_CONTEXT)ReportContext)->ButtonCache.ButtonSlots[1] = 0;
-    ((PREPORT_CONTEXT)ReportContext)->ButtonCache.ButtonSlots[2] = 0;
+	controller->DevicePowerState = PowerDeviceD3;
+
+	//
+	// Invalidate state
+	//
+	((PREPORT_CONTEXT)ReportContext)->Cache.SlotValid = 0;
+	((PREPORT_CONTEXT)ReportContext)->Cache.SlotDirty = 0;
+	((PREPORT_CONTEXT)ReportContext)->Cache.DownCount = 0;
+	((PREPORT_CONTEXT)ReportContext)->ButtonCache.ButtonSlots[0] = 0;
+	((PREPORT_CONTEXT)ReportContext)->ButtonCache.ButtonSlots[1] = 0;
+	((PREPORT_CONTEXT)ReportContext)->ButtonCache.ButtonSlots[2] = 0;
 
 
-    WdfWaitLockRelease(controller->ControllerLock);
+	WdfWaitLockRelease(controller->ControllerLock);
 
-    return STATUS_SUCCESS;
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_POWER,
+		"TchStandbyDevice - Exit");
+
+	return STATUS_SUCCESS;
 }

@@ -1,20 +1,20 @@
 /*++
-    Copyright (c) Microsoft Corporation. All Rights Reserved. 
-    Sample code. Dealpoint ID #843729.
+	Copyright (c) Microsoft Corporation. All Rights Reserved. 
+	Sample code. Dealpoint ID #843729.
 
-    Module Name:
+	Module Name:
 
-        queue.h
+		queue.h
 
-    Abstract:
+	Abstract:
 
-        Contains WDF queue related function declarations
+		Contains WDF queue related function declarations
 
-    Environment:
+	Environment:
 
-        Kernel mode
+		Kernel mode
 
-    Revision History:
+	Revision History:
 
 --*/
 

@@ -1,7 +1,7 @@
 /*++
-    Copyright (c) Microsoft Corporation. All Rights Reserved.
-    Copyright (c) Bingxing Wang. All Rights Reserved.
-    Copyright (c) LumiaWoA authors. All Rights Reserved.
+	Copyright (c) Microsoft Corporation. All Rights Reserved.
+	Copyright (c) Bingxing Wang. All Rights Reserved.
+	Copyright (c) LumiaWoA authors. All Rights Reserved.
 
 	Module Name:
 
@@ -21,7 +21,7 @@
 
 #include <Cross Platform Shim\compat.h>
 #include <spb.h>
-#include <fts521\ftsinternal.h>
+#include <fts521\fts521internal.h>
 #include <init.tmh>
 
 NTSTATUS
@@ -52,6 +52,11 @@ TchStartDevice(
 	FTS521_CONTROLLER_CONTEXT* controller;
 	ULONG interruptStatus;
 	NTSTATUS status;
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INIT,
+		"TchStartDevice - Entry");
 
 	controller = (FTS521_CONTROLLER_CONTEXT*)ControllerContext;
 	interruptStatus = 0;
@@ -125,6 +130,13 @@ TchStartDevice(
 	}
 
 exit:
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INIT,
+		"TchStartDevice - Exit - 0x%08lX",
+		status);
+
 	return status;
 }
 
@@ -152,9 +164,19 @@ Return Value:
 {
 	FTS521_CONTROLLER_CONTEXT* controller;
 
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INIT,
+		"TchStopDevice - Entry");
+
 	UNREFERENCED_PARAMETER(SpbContext);
 
 	controller = (FTS521_CONTROLLER_CONTEXT*)ControllerContext;
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INIT,
+		"TchStopDevice - Exit");
 
 	return STATUS_SUCCESS;
 }
@@ -183,6 +205,11 @@ Return Value:
 	FTS521_CONTROLLER_CONTEXT* context;
 	NTSTATUS status;
 	
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INIT,
+		"TchAllocateContext - Entry");
+
 	context = ExAllocatePoolWithTag(
 		NonPagedPoolNx,
 		sizeof(FTS521_CONTROLLER_CONTEXT),
@@ -232,6 +259,12 @@ Return Value:
 
 exit:
 
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INIT,
+		"TchAllocateContext - Exit - 0x%08lX",
+		status);
+
 	return status;
 }
 
@@ -256,6 +289,11 @@ Return Value:
 {
 	FTS521_CONTROLLER_CONTEXT* controller;
 
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INIT,
+		"TchFreeContext - Entry");
+
 	controller = (FTS521_CONTROLLER_CONTEXT*)ControllerContext;
 
 	if (controller != NULL)
@@ -268,6 +306,11 @@ Return Value:
 
 		ExFreePoolWithTag(controller, TOUCH_POOL_TAG);
 	}
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INIT,
+		"TchFreeContext - Exit");
 
 	return STATUS_SUCCESS;
 }

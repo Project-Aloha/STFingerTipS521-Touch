@@ -81,13 +81,16 @@
     <ClCompile Include="..\src\report.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\fts521\ftsinternal.c">
+    <ClCompile Include="..\src\fts521\fts521internal.c">
       <Filter>Source Files\fts521</Filter>
     </ClCompile>
     <ClCompile Include="..\src\idle.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\fts521\ftscore.c">
+    <ClCompile Include="..\src\fts521\fts521core.c">
+      <Filter>Source Files\fts521</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\fts521\fts521events.c">
       <Filter>Source Files\fts521</Filter>
     </ClCompile>
   </ItemGroup>
@@ -97,10 +100,10 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Inf Include="..\src\FingerTipS521.inf">
+    <Inf Include="..\src\STFingerTipS521Touch.inf">
       <Filter>Driver Files</Filter>
     </Inf>
-    <Inf Include="..\src\FingerTipS521-FodReport.inf">
+    <Inf Include="..\src\STFingerTipS521FodReport.inf">
       <Filter>Driver Files</Filter>
     </Inf>
   </ItemGroup>
@@ -162,7 +165,16 @@
     <ClInclude Include="..\include\report.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\fts521\ftsinternal.h">
+    <ClInclude Include="..\include\fts521\fts521internal.h">
+      <Filter>Header Files\fts521</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\fts521\fts521events.h">
+      <Filter>Header Files\fts521</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\fts521\fts521regs.h">
+      <Filter>Header Files\fts521</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\fts521\fts521core.h">
       <Filter>Header Files\fts521</Filter>
     </ClInclude>
   </ItemGroup>

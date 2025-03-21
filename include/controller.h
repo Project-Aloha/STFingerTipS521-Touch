@@ -15,16 +15,16 @@
 //
 // Memory tags
 //
-#define TOUCH_POOL_TAG                  (ULONG)'cuoT'
-#define TOUCH_POOL_TAG_F12              (ULONG)'21oT'
-#define TOUCH_POWER_POOL_TAG            (ULONG)'PuoT'
+#define TOUCH_POOL_TAG				  (ULONG)'cuoT'
+#define TOUCH_POOL_TAG_F12			  (ULONG)'21oT'
+#define TOUCH_POWER_POOL_TAG			(ULONG)'PuoT'
 
 //
 // Constants
 //
-#define MODE_MULTI_TOUCH                0x02
-#define MAX_TOUCH_COORD                 0x0FFF
-#define FINGER_STATUS                   0x01 // finger down
+#define MODE_MULTI_TOUCH				0x02
+#define MAX_TOUCH_COORD				 0x0FFF
+#define FINGER_STATUS				   0x01 // finger down
 
 //
 // Structures
@@ -208,14 +208,14 @@ typedef struct _TOUCH_SCREEN_SETTINGS
 
 NTSTATUS 
 TchAllocateContext(
-    OUT VOID **ControllerContext,
-    IN WDFDEVICE FxDevice
-    );
+	OUT VOID **ControllerContext,
+	IN WDFDEVICE FxDevice
+	);
 
 NTSTATUS 
 TchFreeContext(
-    IN VOID *ControllerContext
-    );
+	IN VOID *ControllerContext
+	);
 
 NTSTATUS
 TchStartDevice(
@@ -225,9 +225,9 @@ TchStartDevice(
 
 NTSTATUS 
 TchStopDevice(
-    IN VOID *ControllerContext,
-    IN SPB_CONTEXT *SpbContext
-    );
+	IN VOID *ControllerContext,
+	IN SPB_CONTEXT *SpbContext
+	);
 
 NTSTATUS
 TchStandbyDevice(
@@ -238,24 +238,24 @@ TchStandbyDevice(
 
 NTSTATUS 
 TchWakeDevice(
-    IN VOID *ControllerContext,
-    IN SPB_CONTEXT *SpbContext
-    );
+	IN VOID *ControllerContext,
+	IN SPB_CONTEXT *SpbContext
+	);
 
 NTSTATUS
 RtlReadRegistryValue(
-    PCWSTR registry_path, 
-    PCWSTR value_name, 
-    ULONG type, 
-    PVOID data, 
-    ULONG length
-    );
+	PCWSTR registry_path, 
+	PCWSTR value_name, 
+	ULONG type, 
+	PVOID data, 
+	ULONG length
+	);
 
 NTSTATUS
 TchRegistryGetControllerSettings(
-    IN VOID *ControllerContext,
-    IN WDFDEVICE FxDevice
-    );
+	IN VOID *ControllerContext,
+	IN WDFDEVICE FxDevice
+	);
 
 VOID
 TchGetTouchSettings(
@@ -264,8 +264,8 @@ TchGetTouchSettings(
 
 NTSTATUS
 TchPowerSettingCallback(
-    _In_ LPCGUID SettingGuid,
-    _In_ PVOID Value,
-    _In_ ULONG ValueLength,
-    _Inout_opt_ PVOID Context
+	_In_ LPCGUID SettingGuid,
+	_In_ PVOID Value,
+	_In_ ULONG ValueLength,
+	_Inout_opt_ PVOID Context
 );

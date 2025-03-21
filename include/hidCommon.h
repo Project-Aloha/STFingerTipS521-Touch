@@ -11,7 +11,7 @@
 #define PTP_COLLECTION_WINDOWS 3
 
 #define PTP_CONTACT_CONFIDENCE_BIT   1
-#define PTP_CONTACT_TIPSWITCH_BIT    2
+#define PTP_CONTACT_TIPSWITCH_BIT	2
 
 #define REPORTID_DIAGNOSTIC_1 0xF3
 #define REPORTID_DIAGNOSTIC_2 0xF2
@@ -32,15 +32,15 @@
 #define BUTTON_SWITCH 0x57
 #define SURFACE_SWITCH 0x58
 
-#define USAGE_PAGE         0x05
-#define USAGE_PAGE_1       0x06
-#define USAGE              0x09
-#define USAGE_2            0x0A
-#define USAGE_MINIMUM      0x19
-#define USAGE_MAXIMUM      0x29
-#define LOGICAL_MINIMUM    0x15
+#define USAGE_PAGE		 0x05
+#define USAGE_PAGE_1	   0x06
+#define USAGE			  0x09
+#define USAGE_2			0x0A
+#define USAGE_MINIMUM	  0x19
+#define USAGE_MAXIMUM	  0x29
+#define LOGICAL_MINIMUM	0x15
 #define LOGICAL_MINIMUM_2  0x16
-#define LOGICAL_MAXIMUM    0x25
+#define LOGICAL_MAXIMUM	0x25
 #define LOGICAL_MAXIMUM_2  0x26
 #define LOGICAL_MAXIMUM_3  0x27
 #define PHYSICAL_MINIMUM   0x35
@@ -48,16 +48,16 @@
 #define PHYSICAL_MAXIMUM   0x45
 #define PHYSICAL_MAXIMUM_2 0x46
 #define PHYSICAL_MAXIMUM_3 0x47
-#define UNIT_EXPONENT      0x55
-#define UNIT               0x65
-#define UNIT_2             0x66
+#define UNIT_EXPONENT	  0x55
+#define UNIT			   0x65
+#define UNIT_2			 0x66
 
-#define REPORT_ID       0x85
-#define REPORT_COUNT    0x95
+#define REPORT_ID	   0x85
+#define REPORT_COUNT	0x95
 #define REPORT_COUNT_2	0x96
-#define REPORT_SIZE     0x75
-#define INPUT           0x81
-#define FEATURE         0xb1
+#define REPORT_SIZE	 0x75
+#define INPUT		   0x81
+#define FEATURE		 0xb1
 
 #define BEGIN_COLLECTION 0xa1
 #define END_COLLECTION   0xc0

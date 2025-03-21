@@ -1,12 +1,16 @@
-# FingerTipS Touch (FTS521) Driver for Windows
+# ST Microelectronics FingerTipS-V521 Touch Driver
 
 ## Main
-* This driver is mainly applicable to Xiaomi 9(Cepheus) devices,
-* In this repository you can find the FTS521 controller driver for Windows (KMDF).
-* This repository has been forked from https://github.com/theR4K/SynapticsTouch for the base and modified to work with Focal Tech digitizers, and again it was forked from https://github.com/gus33000/FocalTechTouch.
+* In this repository you can find the FingerTipS-V521 controller driver for Windows (KMDF).
+* This repository is based on the source code of [FocalTechTouch](https://github.com/gus33000/FocalTechTouch), and has been modified with reference to the [STTouch](https://github.com/WOA-Project/STTouch) driver and the original rebased driver, so as to enable the FingerTipS-V521 Touch to work.
 
-## Disclaimer
+## Licenses
+* Part of the code of this project is refer on [STTouch](https://github.com/WOA-Project/STTouch), and the relevant rights belong to DuoWoA authors.
+* Part of the code of this project is licensed under the [MIT License](LICENSE.md), which is only applicable to the parts that are originally created by the author of this project or have been authorized.
 
-* This driver has not been completed yet and is currently almost unusable
-* It contains debugging code and may also lack annotations.
-* Tracing has been replaced with KdPrintEx for various reason making development easier on some versions of Windows.
+## Acknowledgements
+* [Gustave Monce](https://github.com/gus33000)
+* [FakeTouch](https://github.com/WOA-Project/FakeTouch)
+* [STTouch](https://github.com/WOA-Project/STTouch)
+* [WOA-Project](https://github.com/WOA-Project)
+* [Project-Aloha](https://github.com/Project-Aloha)

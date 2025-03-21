@@ -88,7 +88,7 @@ unsigned long find_first_bit(const unsigned long *addr, unsigned long size)
 * This is a common helper function for find_next_bit, find_next_zero_bit, and
 * find_next_and_bit. The differences are:
 *  - The "invert" argument, which is XORed with each fetched word before
-*    searching it for one bits.
+*	searching it for one bits.
 *  - The optional "addr2", which is anded with "addr1" if present.
 */
 static inline unsigned long _find_next_bit(const unsigned long *addr1,

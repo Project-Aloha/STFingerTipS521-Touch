@@ -28,27 +28,27 @@
 
 typedef struct _TOUCH_SCREEN_PROPERTIES
 {
-    UINT32 TouchSwapAxes;
-    UINT32 TouchInvertXAxis;
-    UINT32 TouchInvertYAxis;
-    UINT32 TouchPhysicalWidth;
-    UINT32 TouchPhysicalHeight;
-    UINT32 TouchPhysicalButtonHeight;
-    UINT32 TouchPillarBoxWidthLeft;
-    UINT32 TouchPillarBoxWidthRight;
-    UINT32 TouchLetterBoxHeightTop;
-    UINT32 TouchLetterBoxHeightBottom;
-    UINT32 DisplayPhysicalWidth;
-    UINT32 DisplayPhysicalHeight;
-    UINT32 DisplayViewableWidth;
-    UINT32 DisplayViewableHeight;
-    UINT32 DisplayPillarBoxWidthLeft;
-    UINT32 DisplayPillarBoxWidthRight;
-    UINT32 DisplayLetterBoxHeightTop;
-    UINT32 DisplayLetterBoxHeightBottom;
-    UINT32 DisplayHeight10um;
-    UINT32 DisplayWidth10um;
-    UINT32 TouchHardwareLacksContinuousReporting;
+	UINT32 TouchSwapAxes;
+	UINT32 TouchInvertXAxis;
+	UINT32 TouchInvertYAxis;
+	UINT32 TouchPhysicalWidth;
+	UINT32 TouchPhysicalHeight;
+	UINT32 TouchPhysicalButtonHeight;
+	UINT32 TouchPillarBoxWidthLeft;
+	UINT32 TouchPillarBoxWidthRight;
+	UINT32 TouchLetterBoxHeightTop;
+	UINT32 TouchLetterBoxHeightBottom;
+	UINT32 DisplayPhysicalWidth;
+	UINT32 DisplayPhysicalHeight;
+	UINT32 DisplayViewableWidth;
+	UINT32 DisplayViewableHeight;
+	UINT32 DisplayPillarBoxWidthLeft;
+	UINT32 DisplayPillarBoxWidthRight;
+	UINT32 DisplayLetterBoxHeightTop;
+	UINT32 DisplayLetterBoxHeightBottom;
+	UINT32 DisplayHeight10um;
+	UINT32 DisplayWidth10um;
+	UINT32 TouchHardwareLacksContinuousReporting;
 } TOUCH_SCREEN_PROPERTIES, * PTOUCH_SCREEN_PROPERTIES;
 
 VOID

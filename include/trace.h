@@ -8,39 +8,39 @@
 // {64BAF936-E94C-4747-91E3-BB4CB8328E5F}
 //
 
-#define WPP_CONTROL_GUIDS                        \
-    WPP_DEFINE_CONTROL_GUID(                     \
-        TouchDriverTraceGuid, (64BAF936,E94C,4747,91E3,BB4CB8328E5F),  \
+#define WPP_CONTROL_GUIDS						\
+	WPP_DEFINE_CONTROL_GUID(					 \
+		TouchDriverTraceGuid, (64BAF936,E94C,4747,91E3,BB4CB8328E5F),  \
 																	   \
-        WPP_DEFINE_BIT(TRACE_INIT)          \
-        WPP_DEFINE_BIT(TRACE_REGISTRY)      \
-        WPP_DEFINE_BIT(TRACE_HID)           \
-        WPP_DEFINE_BIT(TRACE_PNP)           \
-        WPP_DEFINE_BIT(TRACE_POWER)         \
-        WPP_DEFINE_BIT(TRACE_SPB)           \
-        WPP_DEFINE_BIT(TRACE_CONFIG)        \
-        WPP_DEFINE_BIT(TRACE_REPORTING)     \
-        WPP_DEFINE_BIT(TRACE_INTERRUPT)     \
-        WPP_DEFINE_BIT(TRACE_SAMPLES)       \
-        WPP_DEFINE_BIT(TRACE_OTHER)         \
-        WPP_DEFINE_BIT(TRACE_IDLE)          \
+		WPP_DEFINE_BIT(TRACE_INIT)		  \
+		WPP_DEFINE_BIT(TRACE_REGISTRY)	  \
+		WPP_DEFINE_BIT(TRACE_HID)		   \
+		WPP_DEFINE_BIT(TRACE_PNP)		   \
+		WPP_DEFINE_BIT(TRACE_POWER)		 \
+		WPP_DEFINE_BIT(TRACE_SPB)		   \
+		WPP_DEFINE_BIT(TRACE_CONFIG)		\
+		WPP_DEFINE_BIT(TRACE_REPORTING)	 \
+		WPP_DEFINE_BIT(TRACE_INTERRUPT)	 \
+		WPP_DEFINE_BIT(TRACE_SAMPLES)	   \
+		WPP_DEFINE_BIT(TRACE_OTHER)		 \
+		WPP_DEFINE_BIT(TRACE_IDLE)		  \
 		WPP_DEFINE_BIT(TRACE_DRIVER)		\
-        )
+		)
 
-#define WPP_FLAG_LEVEL_LOGGER(flag, level)                                  \
-    WPP_LEVEL_LOGGER(flag)
+#define WPP_FLAG_LEVEL_LOGGER(flag, level)								  \
+	WPP_LEVEL_LOGGER(flag)
 
-#define WPP_FLAG_LEVEL_ENABLED(flag, level)                                 \
-    (WPP_LEVEL_ENABLED(flag) &&                                             \
-     WPP_CONTROL(WPP_BIT_ ## flag).Level >= level)
+#define WPP_FLAG_LEVEL_ENABLED(flag, level)								 \
+	(WPP_LEVEL_ENABLED(flag) &&											 \
+	 WPP_CONTROL(WPP_BIT_ ## flag).Level >= level)
 
 #define WPP_LEVEL_FLAGS_LOGGER(lvl,flags) \
-           WPP_LEVEL_LOGGER(flags)
+		   WPP_LEVEL_LOGGER(flags)
 
 #define WPP_LEVEL_FLAGS_ENABLED(lvl, flags) \
-           (WPP_LEVEL_ENABLED(flags) && WPP_CONTROL(WPP_BIT_ ## flags).Level >= lvl)
+		   (WPP_LEVEL_ENABLED(flags) && WPP_CONTROL(WPP_BIT_ ## flags).Level >= lvl)
 
-//           
+//		   
 // WPP orders static parameters before dynamic parameters. To support the Trace function
 // defined below which sets FLAGS=MYDRIVER_ALL_INFO, a custom macro must be defined to
 // reorder the arguments to what the .tpl configuration file expects.
@@ -58,4 +58,4 @@
 //
 
 #define Trace(LEVEL, FLAGS, MSG, ...) \
-    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "FingerTipS521-Touch: " MSG "\n", __VA_ARGS__);
+	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "STFingerTipSTouch-Touch: " MSG "\n", __VA_ARGS__);
