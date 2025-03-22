@@ -106,6 +106,7 @@ typedef struct _DEVICE_EXTENSION
 	// Report
 	//
 	REPORT_CONTEXT ReportContext;
+	BOOLEAN ReportDone;
 
 	//
 	// PTP New

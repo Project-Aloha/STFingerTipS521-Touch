@@ -226,7 +226,11 @@ Return Value:
 	return status;
 }
 
-NTSTATUS GetGPIO(WDFIOTARGET gpio, unsigned char* value)
+NTSTATUS
+GetGPIO(
+	WDFIOTARGET gpio, 
+	char* value
+)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	WDF_MEMORY_DESCRIPTOR outputDescriptor;
@@ -238,7 +242,11 @@ NTSTATUS GetGPIO(WDFIOTARGET gpio, unsigned char* value)
 	return status;
 }
 
-NTSTATUS SetGPIO(WDFIOTARGET gpio, unsigned char* value)
+NTSTATUS
+SetGPIO(
+	WDFIOTARGET gpio, 
+	unsigned char* value
+)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	WDF_MEMORY_DESCRIPTOR inputDescriptor, outputDescriptor;
@@ -251,7 +259,13 @@ NTSTATUS SetGPIO(WDFIOTARGET gpio, unsigned char* value)
 	return status;
 }
 
-NTSTATUS OpenIOTarget(PDEVICE_EXTENSION ctx, LARGE_INTEGER res, ACCESS_MASK use, WDFIOTARGET* target)
+NTSTATUS 
+OpenIOTarget(
+	PDEVICE_EXTENSION ctx, 
+	LARGE_INTEGER res, 
+	ACCESS_MASK use, 
+	WDFIOTARGET* target
+)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	WDF_OBJECT_ATTRIBUTES ObjectAttributes;
@@ -295,6 +309,49 @@ Exit:
 }
 
 NTSTATUS
+SetResetGPIO(
+	WDFIOTARGET gpio
+)
+{
+/*++
+  Routine Description:
+
+	This routine is separated from the part of setting the GPIO in OnPrepareHardware, 
+	so as to configure the GPIO of the stfts521 chip or perform a system reset when desired.
+
+--*/
+	NTSTATUS status = STATUS_SUCCESS;
+	LARGE_INTEGER delay;
+	unsigned char value;
+
+	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Starting bring up sequence for the controller");
+
+	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to low");
+
+	value = 0;
+	SetGPIO(gpio, &value);
+
+	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Waiting...");
+
+	delay.QuadPart = -10 * TOUCH_POWER_RAIL_STABLE_TIME;
+	KeDelayExecutionThread(KernelMode, TRUE, &delay);
+
+	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to high");
+
+	value = 1;
+	SetGPIO(gpio, &value);
+
+	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Waiting...");
+
+	delay.QuadPart = -10 * TOUCH_DELAY_TO_COMMUNICATE;
+	KeDelayExecutionThread(KernelMode, TRUE, &delay);
+
+	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Done");
+
+	return status;
+}
+
+NTSTATUS
 OnPrepareHardware(
 	IN WDFDEVICE FxDevice,
 	IN WDFCMRESLIST FxResourcesRaw,
@@ -327,8 +384,6 @@ OnPrepareHardware(
 	PDEVICE_EXTENSION devContext;
 	ULONG resourceCount;
 	ULONG i;
-	LARGE_INTEGER delay;
-	unsigned char value;
 
 	UNREFERENCED_PARAMETER(FxResourcesRaw);
 
@@ -386,37 +441,13 @@ OnPrepareHardware(
 
 	if (devContext->HasResetGpio)
 	{
-		/*
 		status = OpenIOTarget(devContext, devContext->ResetGpioId, GENERIC_READ | GENERIC_WRITE, &devContext->ResetGpio);
 		if (!NT_SUCCESS(status)) {
 			Trace(TRACE_LEVEL_ERROR, TRACE_DRIVER, "OpenIOTarget failed for Reset GPIO 0x%x", status);
 			goto exit;
 		}
 
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Starting bring up sequence for the controller");
-
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to low");
-
-		value = 0;
-		SetGPIO(devContext->ResetGpio, &value);
-
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Waiting...");
-
-		delay.QuadPart = -10 * TOUCH_POWER_RAIL_STABLE_TIME;
-		KeDelayExecutionThread(KernelMode, TRUE, &delay);
-
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to high");
-
-		value = 1;
-		SetGPIO(devContext->ResetGpio, &value);
-
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Waiting...");
-
-		delay.QuadPart = -10 * TOUCH_DELAY_TO_COMMUNICATE;
-		KeDelayExecutionThread(KernelMode, TRUE, &delay);
-
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Done");
-		*/
+		SetResetGPIO(devContext->ResetGpio);
 	}
 
 	//
@@ -564,6 +595,12 @@ OnPrepareHardware(
 
 		goto exit;
 	}
+
+	//
+	// Set it to FALSE after initialization to avoid a conflict 
+	// between the "TchReadReport" method and the "SetResetGPIO" operation.
+	//
+	devContext->ReportDone = FALSE;
 
 exit:
 

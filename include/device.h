@@ -20,6 +20,10 @@
 
 #pragma once
 
+NTSTATUS
+SetResetGPIO(
+	WDFIOTARGET gpio
+);
 
 EVT_WDF_DEVICE_D0_ENTRY OnD0Entry;
 
