@@ -21,6 +21,7 @@
 
 #include <Cross Platform Shim\compat.h>
 #include <controller.h>
+#include <device.h>
 #include <spb.h>
 #include <fts521\fts521core.h>
 #include <fts521\fts521internal.h>
@@ -181,6 +182,8 @@ TchPowerSettingCallback(
 
 			SetScanMode(SpbContext, SCAN_MODE_LOW_POWER, 0x00);
 
+			WdfInterruptDisable(devContext->InterruptObject);
+
 			break;
 		case 1:
 			Trace(
@@ -188,7 +191,26 @@ TchPowerSettingCallback(
 				TRACE_POWER,
 				"The Display is On");
 
-			SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
+			if (devContext->ReportDone)
+			{
+				// Perform a system reset of the IC.
+				SetResetGPIO(devContext->ResetGpio);
+
+				SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
+
+				// Clean Up event
+				BYTE EventBufferEmpty[256];
+				BYTE FTS521_READ_EVENTS[1] = { 0x86 };
+				FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, EventBufferEmpty, 3, 256);
+
+				WdfInterruptEnable(devContext->InterruptObject);
+			}
+			else
+			{
+				SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
+
+				WdfInterruptEnable(devContext->InterruptObject);
+			}
 
 			break;
 		case 2:

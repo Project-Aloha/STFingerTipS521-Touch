@@ -279,6 +279,16 @@ Return Value:
 		WDF_NO_OBJECT_ATTRIBUTES,
 		&devContext->InterruptObject);
 
+	//
+	// Disable the interrupt when the device is started for the first time, 
+	// and re-enable it until the TchPowerSettingCallback method is executed, 
+	// so as to avoid conflicts in the operations of the interrupt.
+	//
+	if (NT_SUCCESS(status))
+	{
+		WdfInterruptDisable(devContext->InterruptObject);
+	}
+
 	if (!NT_SUCCESS(status))
 	{
 		Trace(

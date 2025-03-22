@@ -291,7 +291,7 @@ Return Value:
 	//
 	if (devContext->ServiceInterruptsAfterD0Entry == TRUE)
 	{
-		Fts521ServiceInterrupts(
+		status = Fts521ServiceInterrupts(
 			devContext->TouchContext,
 			&devContext->I2CContext,
 			&devContext->ReportContext);

@@ -122,8 +122,18 @@ Return Value:
 		//
 		// Dangling read requests for passing up touch data
 		//
-
+		
 		status = TchReadReport(device, Request, &requestPending);
+
+		//
+		// Avoid a conflict with the SetResetGPIO method during the processing
+		// of touch events when the device is started for the first time.
+		//
+		if (status)
+		{
+			devContext->ReportDone = TRUE;
+		}
+
 		break;
 
 	case IOCTL_HID_SET_FEATURE:
