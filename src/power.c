@@ -193,8 +193,11 @@ TchPowerSettingCallback(
 
 			if (devContext->ReportDone)
 			{
-				// Perform a system reset of the IC.
-				SetResetGPIO(devContext->ResetGpio);
+				if (devContext->HasResetGpio)
+				{
+					// Perform a system reset of the IC.
+					SetResetGPIO(devContext->ResetGpio);
+				}
 
 				SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
 
