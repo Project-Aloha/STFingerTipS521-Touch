@@ -137,8 +137,12 @@ Fts521ConfigureFunctions(
 	FTS521_CONTROLLER_CONTEXT* controller;
 	controller = (FTS521_CONTROLLER_CONTEXT*)ControllerContext;
 
-	BYTE FTS521_LOCKDOWN[3] = { 0xA4, 0x06, FTS_CMD_LOCKDOWN_ID };
-	status = FtsWrite(SpbContext, FTS521_LOCKDOWN, 3);
+	// FTS521_LOCKDOWN:
+	// * Address: 0xA4
+	// * { 0xA4, 0x06, FTS_CMD_LOCKDOWN_ID };
+	BYTE FTS521_LOCKDOWN[2] = { 0x06, FTS_CMD_LOCKDOWN_ID };
+	status = SpbWriteDataSynchronously(SpbContext, 0xA4 ,FTS521_LOCKDOWN, sizeof(FTS521_LOCKDOWN));
+
 	if (!NT_SUCCESS(status))
 	{
 		Trace(
@@ -155,8 +159,12 @@ Fts521ConfigureFunctions(
 		&GestureEnabled,
 		sizeof(DWORD))) && GestureEnabled == 1)
 	{
-		BYTE FTS521_GESTURE[6] = { 0xA2, 0x03, 0x20, 0x00, 0x00, 0x01 };
-		status = FtsWrite(SpbContext, FTS521_GESTURE, 6);
+		// FTS521_GESTURE: 
+		// * Address: 0xA2
+		// * { 0xA2, 0x03, 0x20, 0x00, 0x00, 0x01 };
+		BYTE FTS521_GESTURE[5] = { 0x03, 0x20, 0x00, 0x00, 0x01 };
+		status = SpbWriteDataSynchronously(SpbContext, 0xA2, FTS521_GESTURE, sizeof(FTS521_GESTURE));
+
 		if (!NT_SUCCESS(status))
 		{
 			Trace(

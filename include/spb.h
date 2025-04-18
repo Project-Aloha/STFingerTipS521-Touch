@@ -74,10 +74,3 @@ FtsWriteReadU8UX(
 	IN ULONG inputLength,
 	IN ULONG outputLength
 );
-
-NTSTATUS
-FtsWrite(
-	IN SPB_CONTEXT* SpbContext,
-	IN PVOID Data,
-	IN ULONG Length
-);

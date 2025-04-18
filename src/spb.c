@@ -29,33 +29,6 @@
 /*
  * FingerTipS-Touch I2C API
 */
-NTSTATUS
-FtsWrite(
-	IN SPB_CONTEXT* SpbContext,
-	IN PVOID Data,
-	IN ULONG Length
-)
-{
-	WDF_MEMORY_DESCRIPTOR  inMemoryDescriptor;
-	ULONG_PTR  bytesWritten = (ULONG_PTR)NULL;
-	NTSTATUS status;
-
-
-	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&inMemoryDescriptor,
-		Data,
-		Length);
-
-	status = WdfIoTargetSendWriteSynchronously(
-		SpbContext->SpbIoTarget,
-		NULL,
-		&inMemoryDescriptor,
-		NULL,
-		NULL,
-		&bytesWritten
-	);
-	return status;
-}
-
 
 NTSTATUS
 FtsWriteReadU8UX(

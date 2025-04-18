@@ -27,9 +27,13 @@ SetScanMode(
 	BYTE Settings)
 {
 	NTSTATUS status;
-	BYTE FTS521_SCAN_MODE[3] = { FTS_CMD_SCAN_MODE, Mode, Settings };
 
-	status = FtsWrite(SpbContext, FTS521_SCAN_MODE, 3);
+	// FTS521_SCAN_MODE: 
+	// * Address: FTS_CMD_SCAN_MODE
+	// * { FTS_CMD_SCAN_MODE, Mode, Settings };
+	BYTE FTS521_SCAN_MODE[2] = { Mode, Settings };
+	status = SpbWriteDataSynchronously(SpbContext, FTS_CMD_SCAN_MODE, FTS521_SCAN_MODE, sizeof(FTS521_SCAN_MODE));
+
 	if (!NT_SUCCESS(status))
 	{
 		Trace(
