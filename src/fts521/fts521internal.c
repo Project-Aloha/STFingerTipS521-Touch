@@ -147,6 +147,26 @@ Fts521ConfigureFunctions(
 			"Fts521ConfigureFunctions - Error Writing Lockdown code into the IC");
 	}
 
+	DWORD GestureEnabled = 0;
+	if (NT_SUCCESS(RtlReadRegistryValue(
+		(PCWSTR)L"\\Registry\\Machine\\SOFTWARE\\OEM\\XiaoMi\\Touch\\WakeupGesture",
+		(PCWSTR)L"Enabled",
+		REG_DWORD,
+		&GestureEnabled,
+		sizeof(DWORD))) && GestureEnabled == 1)
+	{
+		BYTE FTS521_GESTURE[6] = { 0xA2, 0x03, 0x20, 0x00, 0x00, 0x01 };
+		status = FtsWrite(SpbContext, FTS521_GESTURE, 6);
+		if (!NT_SUCCESS(status))
+		{
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_INTERRUPT,
+				"Fts521ConfigureFunctions - Error Enabling Gesture Mode for IC - 0x%08lX",
+				status);
+		}
+	}
+
 	//Active Scan OFF
 	SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x00);
 
