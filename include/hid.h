@@ -63,17 +63,6 @@ typedef struct _HID_TOUCH_REPORT {
 	UCHAR			ContactCount;
 } HID_TOUCH_REPORT, * PHID_TOUCH_REPORT;
 
-// REPORTID_KEYPAD
-typedef struct _HID_KEY_REPORT {
-	UCHAR  SystemPowerDown : 1;
-	UCHAR  Start : 1;
-	UCHAR  ACSearch : 1;
-	UCHAR  ACBack : 1;
-	UCHAR  rReserved : 4;
-	UCHAR  bReserved;
-	USHORT wReserved;
-} HID_KEY_REPORT, * PHID_KEY_REPORT;
-
 // REPORTID_STYLUS
 #pragma pack(push)
 #pragma pack(1)
@@ -100,7 +89,6 @@ typedef struct _HID_INPUT_REPORT
 	{
 		HID_TOUCH_REPORT TouchReport;
 		HID_PEN_REPORT   PenReport;
-		HID_KEY_REPORT   KeyReport;
 	};
 #ifdef _TIMESTAMP_
 	LARGE_INTEGER TimeStamp;
@@ -421,65 +409,6 @@ TchReadReport(
 			FEATURE, 0x02, /* Feature: (Data, Var, Abs) */ \
 		END_COLLECTION, /* End Collection */ \
 	END_COLLECTION /* End Collection */
-
-#define ST_FTS521_DIGITIZER_KEYPAD \
-	USAGE_PAGE, 0x01, /* Usage Page (Generic Desktop Ctrls) */ \
-	USAGE, 0x0D, /* Usage (Portable Device Control) */ \
-	BEGIN_COLLECTION, 0x01, /* Collection (Application) */ \
-		REPORT_ID, REPORTID_KEYPAD, /* Report ID (9) */ \
-		\
-		USAGE_PAGE, 0x01, /* USAGE_PAGE (Generic Desktop Page) */ \
-		USAGE, 0x81, /* System Power Down */\
-		LOGICAL_MINIMUM, 0x00, /* Logical Minimum (0) */ \
-		LOGICAL_MAXIMUM, 0x01, /* Logical Maximum (1) */ \
-		PHYSICAL_MINIMUM, 0x00, /* Physical Minimum (0) */ \
-		PHYSICAL_MAXIMUM, 0x01, /* Physical Maximum (1) */ \
-		UNIT, 0x00, /* Unit (None) */ \
-		UNIT_EXPONENT, 0x00, /* Unit Exponent (0) */ \
-		REPORT_SIZE, 0x01, /* Report Size (1) */ \
-		REPORT_COUNT, 0x01, /* Report Count (1) */ \
-		INPUT, 0x02, /* Input: (Data, Var, Abs) */ \
-		\
-		USAGE_PAGE, 0x07, /* USAGE_PAGE (Keyboard Page) */ \
-		USAGE, 0xE3, /* Keyboard Left GUI */\
-		LOGICAL_MINIMUM, 0x00, /* Logical Minimum (0) */ \
-		LOGICAL_MAXIMUM, 0x01, /* Logical Maximum (1) */ \
-		PHYSICAL_MINIMUM, 0x00, /* Physical Minimum (0) */ \
-		PHYSICAL_MAXIMUM, 0x01, /* Physical Maximum (1) */ \
-		UNIT, 0x00, /* Unit (None) */ \
-		UNIT_EXPONENT, 0x00, /* Unit Exponent (0) */ \
-		REPORT_SIZE, 0x01, /* Report Size (1) */ \
-		REPORT_COUNT, 0x01, /* Report Count (1) */ \
-		INPUT, 0x02, /* Input: (Data, Var, Abs) */ \
-		\
-		USAGE_PAGE, 0x0C, /* USAGE_PAGE (Consumer Page) */ \
-		USAGE_2, 0x21, 0x02, /* AC Search */\
-		LOGICAL_MINIMUM, 0x00, /* Logical Minimum (0) */ \
-		LOGICAL_MAXIMUM, 0x01, /* Logical Maximum (1) */ \
-		PHYSICAL_MINIMUM, 0x00, /* Physical Minimum (0) */ \
-		PHYSICAL_MAXIMUM, 0x01, /* Physical Maximum (1) */ \
-		UNIT, 0x00, /* Unit (None) */ \
-		UNIT_EXPONENT, 0x00, /* Unit Exponent (0) */ \
-		REPORT_SIZE, 0x01, /* Report Size (1) */ \
-		REPORT_COUNT, 0x01, /* Report Count (1) */ \
-		INPUT, 0x02, /* Input: (Data, Var, Abs) */ \
-		\
-		USAGE_PAGE, 0x0C, /* USAGE_PAGE (Consumer Page) */ \
-		USAGE_2, 0x24, 0x02, /* AC Back */\
-		LOGICAL_MINIMUM, 0x00, /* Logical Minimum (0) */ \
-		LOGICAL_MAXIMUM, 0x01, /* Logical Maximum (1) */ \
-		PHYSICAL_MINIMUM, 0x00, /* Physical Minimum (0) */ \
-		PHYSICAL_MAXIMUM, 0x01, /* Physical Maximum (1) */ \
-		UNIT, 0x00, /* Unit (None) */ \
-		UNIT_EXPONENT, 0x00, /* Unit Exponent (0) */ \
-		REPORT_SIZE, 0x01, /* Report Size (1) */ \
-		REPORT_COUNT, 0x01, /* Report Count (1) */ \
-		INPUT, 0x02, /* Input: (Data, Var, Abs) */ \
-		\
-		REPORT_COUNT, 0x1c, /* Report Count (28) */ \
-		INPUT, 0x03, /* Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position) */ \
-	END_COLLECTION /* End Collection */
-
 
 #define DEFAULT_PTP_HQA_BLOB \
 	0xfc, 0x28, 0xfe, 0x84, 0x40, 0xcb, 0x9a, 0x87, \

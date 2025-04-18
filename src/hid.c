@@ -46,7 +46,6 @@ const UCHAR gReportDescriptor[] = {
 	//	ST_FTS521_DIGITIZER_DIAGNOSTIC4,
 		ST_FTS521_FINGER
 	//	ST_FTS521_DIGITIZER_REPORTMODE,
-	//	ST_FTS521_DIGITIZER_KEYPAD,
 	//	ST_FTS521_DIGITIZER_STYLUS
 	};
 const ULONG gdwcbReportDescriptor = sizeof(gReportDescriptor);
@@ -137,21 +136,6 @@ TchSendReport(
 			hidReportFromDriver->TouchReport.Contacts[0].X,
 			hidReportFromDriver->TouchReport.Contacts[0].Y);
 		break;
-	}
-	case REPORTID_KEYPAD:
-	{
-		Trace(
-			TRACE_LEVEL_INFORMATION,
-			TRACE_HID,
-			"HID key: "
-			"System Power Down = %d, "
-			"Start = %d, "
-			"AC Search = %d, "
-			"AC Back = %d",
-			hidReportFromDriver->KeyReport.SystemPowerDown,
-			hidReportFromDriver->KeyReport.Start,
-			hidReportFromDriver->KeyReport.ACSearch,
-			hidReportFromDriver->KeyReport.ACBack);
 	}
 	}
 

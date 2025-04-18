@@ -55,9 +55,9 @@ TOUCH_SCREEN_PROPERTIES gDefaultProperties =
 	0x0,						// DisplayPillarBoxWidthRight
 	0x0,						// DisplayLetterBoxHeightTop
 	0x0,						// DisplayLetterBoxHeightBottom
-	0x39d0,					 // DisplayHeight10um
-	0x1ac2,					 // DisplayWidth10um
-	0x1						 // TouchHardwareLacksContinuousReporting
+	0x39d0,					    // DisplayHeight10um
+	0x1ac2,					    // DisplayWidth10um
+	0x1						    // TouchHardwareLacksContinuousReporting
 };
 
 

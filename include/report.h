@@ -85,19 +85,6 @@ typedef struct _REPORT_CONTEXT
 } REPORT_CONTEXT, * PREPORT_CONTEXT;
 
 NTSTATUS
-ReportWakeup(
-	IN PREPORT_CONTEXT ReportContext
-);
-
-NTSTATUS
-ReportKeypad(
-	IN PREPORT_CONTEXT ReportContext,
-	IN BOOLEAN Back,
-	IN BOOLEAN Start,
-	IN BOOLEAN Search
-);
-
-NTSTATUS
 ReportPen(
 	IN PREPORT_CONTEXT ReportContext,
 	IN BOOLEAN TipSwitch,
