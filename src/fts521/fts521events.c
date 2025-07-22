@@ -110,7 +110,7 @@ TchServiceObjectInterrupts(
 	BYTE EventBuffer[256];
 	BYTE FTS521_READ_EVENTS[1] = { 0x86 };
 
-	status = FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, &EventBuffer[0], 3, 8);
+	status = FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, 1, &EventBuffer[0], 8);
 
 	if (!NT_SUCCESS(status))
 	{
@@ -126,7 +126,7 @@ TchServiceObjectInterrupts(
 	remain = EventBuffer[7];
 	if (remain > 0)
 	{
-		FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, &EventBuffer[8], 3, 10);
+		FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, 1, &EventBuffer[8], 10);
 	}
 
 	for (int CurrentEventId = 0; CurrentEventId < remain + 1; CurrentEventId++)

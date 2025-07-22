@@ -33,27 +33,27 @@
 NTSTATUS
 FtsWriteReadU8UX(
 	IN SPB_CONTEXT* SpbContext,
-	IN PVOID pInputBuffer,
-	IN PVOID pOutputBuffer,
-	IN ULONG inputLength,
-	IN ULONG outputLength
+	IN PVOID Address,
+	IN ULONG AddressLength,
+	IN PVOID Data,
+	IN ULONG DataLength
 )
 {
-	WDF_MEMORY_DESCRIPTOR  inMemoryDescriptor;
-	WDF_MEMORY_DESCRIPTOR  outMemoryDescriptor;
+	WDF_MEMORY_DESCRIPTOR  AddressMemoryDescriptor;
+	WDF_MEMORY_DESCRIPTOR  DataMemoryDescriptor;
 	ULONG_PTR  bytesWritten = (ULONG_PTR)NULL;
 	ULONG_PTR  bytesRead = (ULONG_PTR)NULL;
 	NTSTATUS status;
 
 
-	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&inMemoryDescriptor,
-		pInputBuffer,
-		inputLength);
+	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&AddressMemoryDescriptor,
+		Address,
+		AddressLength);
 
 	status = WdfIoTargetSendWriteSynchronously(
 		SpbContext->SpbIoTarget,
 		NULL,
-		&inMemoryDescriptor,
+		&AddressMemoryDescriptor,
 		NULL,
 		NULL,
 		&bytesWritten);
@@ -67,14 +67,14 @@ FtsWriteReadU8UX(
 	}
 
 
-	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&outMemoryDescriptor,
-		pOutputBuffer,
-		outputLength);
+	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&DataMemoryDescriptor,
+		Data,
+		DataLength);
 
 	status = WdfIoTargetSendReadSynchronously(
 		SpbContext->SpbIoTarget,
 		NULL,
-		&outMemoryDescriptor,
+		&DataMemoryDescriptor,
 		NULL,
 		NULL,
 		&bytesRead

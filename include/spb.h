@@ -68,9 +68,9 @@ SpbWriteDataSynchronously(
 
 NTSTATUS
 FtsWriteReadU8UX(
-	IN SPB_CONTEXT *SpbContext,
-	IN PVOID pInputBuffer,
-	IN PVOID pOutputBuffer,
-	IN ULONG inputLength,
-	IN ULONG outputLength
+	IN SPB_CONTEXT* SpbContext,
+	IN PVOID Address,
+	IN ULONG AddressLength,
+	IN PVOID Data,
+	IN ULONG DataLength
 );

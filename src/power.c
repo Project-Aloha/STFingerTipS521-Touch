@@ -204,7 +204,7 @@ TchPowerSettingCallback(
 				// Clean Up event
 				BYTE EventBufferEmpty[256];
 				BYTE FTS521_READ_EVENTS[1] = { 0x86 };
-				FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, EventBufferEmpty, 3, 256);
+				FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, 1, EventBufferEmpty, 256);
 
 				WdfInterruptEnable(devContext->InterruptObject);
 			}
