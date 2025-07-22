@@ -446,8 +446,6 @@ OnPrepareHardware(
 			Trace(TRACE_LEVEL_ERROR, TRACE_DRIVER, "OpenIOTarget failed for Reset GPIO 0x%x", status);
 			goto exit;
 		}
-
-		SetResetGPIO(devContext->ResetGpio);
 	}
 
 	//
