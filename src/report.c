@@ -285,7 +285,7 @@ Return Value:
 		//
 		currentFingerIndex = 0;
 
-		fingersToReport = min(ReportContext->Cache.DownCount - TouchesReported, 2);
+		fingersToReport = min(ReportContext->Cache.DownCount - TouchesReported, 10);
 
 		//
 		// There are only 16-bits for ScanTime, truncate it
