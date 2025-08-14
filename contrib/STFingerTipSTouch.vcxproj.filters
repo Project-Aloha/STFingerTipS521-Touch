@@ -87,10 +87,10 @@
     <ClCompile Include="..\src\idle.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\fts521\fts521core.c">
+    <ClCompile Include="..\src\fts521\fts521events.c">
       <Filter>Source Files\fts521</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\fts521\fts521events.c">
+    <ClCompile Include="..\src\fts521\fts521pointer.c">
       <Filter>Source Files\fts521</Filter>
     </ClCompile>
   </ItemGroup>
@@ -174,7 +174,7 @@
     <ClInclude Include="..\include\fts521\fts521regs.h">
       <Filter>Header Files\fts521</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\fts521\fts521core.h">
+    <ClInclude Include="..\include\fts521\fts521pointer.h">
       <Filter>Header Files\fts521</Filter>
     </ClInclude>
   </ItemGroup>

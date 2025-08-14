@@ -23,7 +23,6 @@
 #include <controller.h>
 #include <device.h>
 #include <spb.h>
-#include <fts521\fts521core.h>
 #include <fts521\fts521internal.h>
 #include <fts521\fts521regs.h>
 #include <internal.h>
@@ -167,12 +166,6 @@ TchPowerSettingCallback(
 		DWORD GestureEnabled = 0;
 
 		switch (DisplayState)
-		// Please note:
-		// 1.This method is not applicable to FingerTipS-Touch521 touch 
-		//   chip power management, so do not change its power status.
-		// 2.Meanwhile, keeping the power on will increase power consumption, 
-		//   which is currently an unavoidable issue that we hope to improve 
-		//   in the future
 		{
 		case 0:
 			Trace(
@@ -180,7 +173,7 @@ TchPowerSettingCallback(
 				TRACE_POWER,
 				"The Display is Off");
 
-			SetScanMode(SpbContext, SCAN_MODE_LOW_POWER, 0x00);
+			Fts521SetScanMode(SpbContext, SCAN_MODE_LOW_POWER, 0x00);
 
 			WdfInterruptDisable(devContext->InterruptObject);
 
@@ -199,7 +192,7 @@ TchPowerSettingCallback(
 					SetResetGPIO(devContext->ResetGpio);
 				}
 
-				SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
+				Fts521SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
 
 				// Clean Up event
 				BYTE EventBufferEmpty[256];
@@ -210,7 +203,7 @@ TchPowerSettingCallback(
 			}
 			else
 			{
-				SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
+				Fts521SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
 
 				WdfInterruptEnable(devContext->InterruptObject);
 			}

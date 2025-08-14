@@ -129,7 +129,7 @@ Return Value:
 		// Avoid a conflict with the SetResetGPIO method during the processing
 		// of touch events when the device is started for the first time.
 		//
-		if (status)
+		if (NT_SUCCESS(status))
 		{
 			devContext->ReportDone = TRUE;
 		}

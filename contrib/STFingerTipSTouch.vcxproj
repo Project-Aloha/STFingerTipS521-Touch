@@ -421,9 +421,9 @@
   <ItemGroup>
     <ClCompile Include="..\src\Cross Platform Shim\bitops.c" />
     <ClCompile Include="..\src\Cross Platform Shim\hweight.c" />
-    <ClCompile Include="..\src\fts521\fts521core.c" />
     <ClCompile Include="..\src\fts521\fts521events.c" />
     <ClCompile Include="..\src\fts521\fts521internal.c" />
+    <ClCompile Include="..\src\fts521\fts521pointer.c" />
     <ClCompile Include="..\src\idle.c" />
     <ClCompile Include="..\src\report.c" />
     <ClCompile Include="..\src\touch_power\touch_power.c" />
@@ -445,9 +445,9 @@
     <ClInclude Include="..\include\Cross Platform Shim\bitops.h" />
     <ClInclude Include="..\include\Cross Platform Shim\compat.h" />
     <ClInclude Include="..\include\Cross Platform Shim\hweight.h" />
-    <ClInclude Include="..\include\fts521\fts521core.h" />
     <ClInclude Include="..\include\fts521\fts521events.h" />
     <ClInclude Include="..\include\fts521\fts521internal.h" />
+    <ClInclude Include="..\include\fts521\fts521pointer.h" />
     <ClInclude Include="..\include\fts521\fts521regs.h" />
     <ClInclude Include="..\include\report.h" />
     <ClInclude Include="..\include\touch_power\public.h" />

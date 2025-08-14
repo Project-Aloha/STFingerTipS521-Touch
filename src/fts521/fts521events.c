@@ -4,11 +4,11 @@
 
 	Module Name:
 
-		ftsevents.c
+		fts521events.c
 
 	Abstract:
 
-		Contains ST initialization code
+		Contains STFingerTipSTouch initialization code
 
 	Environment:
 
@@ -23,42 +23,54 @@
 #include <report.h>
 #include <fts521\fts521internal.h>
 #include <fts521\fts521regs.h>
+#include <fts521\fts521pointer.h>
 #include <fts521events.tmh>
 
 NTSTATUS
 Fts521ProcessEvent(
 	FTS521_CONTROLLER_CONTEXT* ControllerContext,
 	PREPORT_CONTEXT ReportContext,
-	BYTE* EventData,
-	IN DETECTED_OBJECTS* Data
+	BYTE* EventData
 )
 {
 	NTSTATUS status = STATUS_SUCCESS;
 
 	int EventID;
-	int x, y;
-	BYTE touchId;
 
 	EventID = EventData[0];
-	touchId = (EventData[1] & 0xF0) >> 4;
-	x = ((EventData[3] & 0x0F) << 8) | (EventData[2]);
-	y = (EventData[4] << 4) | ((EventData[3] & 0xF0) >> 4);
 
 	switch (EventID)
 	{
 		case EVT_ID_ENTER_POINT:
-		{
-			Data->States[touchId] = OBJECT_STATE_FINGER_PRESENT_WITH_ACCURATE_POS;
-			break;
-		}
 		case EVT_ID_MOTION_POINT:
 		{
-			Data->States[touchId] = OBJECT_STATE_FINGER_PRESENT_WITH_ACCURATE_POS;
+			status = Fts521ProcessEnterOrMotionPointerEvent(ControllerContext, ReportContext, EventData);
+			if (!NT_SUCCESS(status))
+			{
+				Trace(
+					TRACE_LEVEL_VERBOSE,
+					TRACE_SAMPLES,
+					"Fts521ProcessEvent - Error while processing enter or motion pointer event - 0x%08lX",
+					status);
+
+				goto exit;
+			}
+
 			break;
 		}
 		case EVT_ID_LEAVE_POINT:
 		{
-			Data->States[touchId] = OBJECT_STATE_NOT_PRESENT;
+			status = Fts521ProcessLeavePointerEvent(ControllerContext, ReportContext, EventData);
+			if (!NT_SUCCESS(status))
+			{
+				Trace(
+					TRACE_LEVEL_VERBOSE,
+					TRACE_SAMPLES,
+					"Fts521ProcessEvent - Error while processing leave pointer event - 0x%08lX",
+					status);
+				goto exit;
+			}
+
 			break;
 		}
 		default:
@@ -72,17 +84,7 @@ Fts521ProcessEvent(
 		}
 	}
 
-	Data->Positions[touchId].X = x;
-	Data->Positions[touchId].Y = y;
-
-	Trace(
-		TRACE_LEVEL_ERROR,
-		TRACE_REPORTING,
-		"Fts521ProcessOneEvent - Touch %d at (x=%d, y=%d)",
-		touchId,
-		x,
-		y);
-
+exit:
 	return status;
 }
 
@@ -134,7 +136,7 @@ TchServiceObjectInterrupts(
 		i = CurrentEventId * 8;
 
 		// Process the event
-		status = Fts521ProcessEvent(controller, ReportContext, EventBuffer + i, &data);
+		status = Fts521ProcessEvent(controller, ReportContext, EventBuffer + i);
 		if (!NT_SUCCESS(status))
 		{
 			Trace(
@@ -143,22 +145,9 @@ TchServiceObjectInterrupts(
 				"TchServiceObjectInterrupts - Error processing event %d - 0x%08lX",
 				CurrentEventId,
 				status);
+
+			goto exit;
 		}
-	}
-
-	status = ReportObjects(
-		ReportContext,
-		data);
-
-	if (!NT_SUCCESS(status))
-	{
-		Trace(
-			TRACE_LEVEL_VERBOSE,
-			TRACE_SAMPLES,
-			"Error while reporting objects - 0x%08lX",
-			status);
-
-		goto exit;
 	}
 
 exit:

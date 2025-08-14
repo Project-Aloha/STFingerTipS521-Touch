@@ -228,6 +228,13 @@ Fts521SetReportingFlags(
 );
 
 NTSTATUS
+Fts521SetScanMode(
+	SPB_CONTEXT* SpbContext,
+	BYTE Mode,
+	BYTE Settings
+);
+
+NTSTATUS
 Fts521ChangeChargerConnectedState(
 	IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
 	IN SPB_CONTEXT* SpbContext,
@@ -253,4 +260,3 @@ Fts521ConfigureInterruptEnable(
 	IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
 	IN SPB_CONTEXT* SpbContext
 );
-

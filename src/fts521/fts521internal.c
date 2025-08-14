@@ -20,7 +20,6 @@
 
 #include <Cross Platform Shim\compat.h>
 #include <report.h>
-#include <fts521\fts521core.h>
 #include <fts521\fts521events.h>
 #include <fts521\fts521internal.h>
 #include <fts521\fts521regs.h>
@@ -176,18 +175,55 @@ Fts521ConfigureFunctions(
 	}
 
 	//Active Scan OFF
-	SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x00);
+	Fts521SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x00);
 
 	delay.QuadPart = RELATIVE(MILLISECONDS(50));
 	KeDelayExecutionThread(KernelMode, TRUE, &delay);
 
 	//Active Scan ON
-	SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
+	Fts521SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
 
 	Trace(
 		TRACE_LEVEL_ERROR,
 		TRACE_REPORTING,
 		"Fts521ConfigureFunctions - Exit");
+
+	return STATUS_SUCCESS;
+}
+
+
+NTSTATUS
+Fts521SetScanMode(
+	SPB_CONTEXT* SpbContext,
+	BYTE Mode,
+	BYTE Settings)
+{
+	NTSTATUS status;
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INTERRUPT,
+		"Fts521SetScanMode - Entry");
+
+
+	// FTS521_SCAN_MODE: 
+	// * Address: FTS_CMD_SCAN_MODE
+	// * { FTS_CMD_SCAN_MODE, Mode, Settings };
+	BYTE FTS521_SCAN_MODE[2] = { Mode, Settings };
+	status = SpbWriteDataSynchronously(SpbContext, FTS_CMD_SCAN_MODE, FTS521_SCAN_MODE, sizeof(FTS521_SCAN_MODE));
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INTERRUPT,
+			"Fts521SetScanMode - Setting scan mode Error");
+	}
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INTERRUPT,
+		"Fts521SetScanMode - Exit");
 
 	return STATUS_SUCCESS;
 }
