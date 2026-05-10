@@ -71,7 +71,7 @@ OnInterruptIsr(
 	UNREFERENCED_PARAMETER(MessageID);
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"OnInterruptIsr - Entry");
 
@@ -113,7 +113,7 @@ OnInterruptIsr(
 exit:
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"OnInterruptIsr - Exit");
 	return TRUE;
@@ -211,6 +211,14 @@ Return Value:
 	devContext = GetDeviceContext(Device);
 
 	UNREFERENCED_PARAMETER(TargetState);
+
+	//
+	// Disable the interrupt before putting the device to standby.
+	// This is necessary when the system shuts down without a prior
+	// display-off notification, to prevent the ISR from racing with
+	// the power-down sequence and blocking system shutdown.
+	//
+	WdfInterruptDisable(devContext->InterruptObject);
 
 	status = TchStandbyDevice(devContext->TouchContext, &devContext->I2CContext, &devContext->ReportContext);
 

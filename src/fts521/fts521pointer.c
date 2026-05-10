@@ -40,13 +40,13 @@ Fts521ProcessEnterOrMotionPointerEvent(
 	int x, y;
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"Fts521ProcessEvent - Enter or Motion Pointer");
 
 	BYTE touchId = (EventData[1] & 0xF0) >> 4;
 
-	if (touchId >= MAX_TOUCHES || touchId < 0)
+	if (touchId >= MAX_TOUCHES)
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
@@ -65,7 +65,7 @@ Fts521ProcessEnterOrMotionPointerEvent(
 	ControllerContext->DetectedObjects.Positions[touchId].Y = y;
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"Fts521ProcessEvent - Touch %d at (x=%d, y=%d)",
 		touchId,
@@ -90,7 +90,7 @@ Fts521ProcessEnterOrMotionPointerEvent(
 exit:
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"Fts521ProcessEvent - Exit - 0x%08lX",
 		status);
@@ -110,13 +110,13 @@ Fts521ProcessLeavePointerEvent(
 	int x, y;
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"Fts521ProcessEvent - Leave Pointer");
 
 	BYTE touchId = (EventData[1] & 0xF0) >> 4;
 
-	if (touchId >= MAX_TOUCHES || touchId < 0)
+	if (touchId >= MAX_TOUCHES)
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
@@ -134,7 +134,7 @@ Fts521ProcessLeavePointerEvent(
 	ControllerContext->DetectedObjects.Positions[touchId].Y = y;
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"Fts521ProcessEvent - Touch %d at (x=%d, y=%d) Left",
 		touchId,
@@ -159,7 +159,7 @@ Fts521ProcessLeavePointerEvent(
 exit:
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"Fts521ProcessEvent - Exit - 0x%08lX",
 		status);

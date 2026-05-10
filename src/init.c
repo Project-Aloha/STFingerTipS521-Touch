@@ -129,6 +129,28 @@ TchStartDevice(
 			status);
 	}
 
+	//
+	// Read firmware version from the IC. Log a warning on failure but
+	// do not fail the start, as this is informational only.
+	//
+	status = Fts521ReadFirmwareVersion(
+		ControllerContext,
+		SpbContext);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_WARNING,
+			TRACE_INIT,
+			"Could not read firmware version - 0x%08lX",
+			status);
+
+		//
+		// Non-fatal: reset status so the device still starts successfully.
+		//
+		status = STATUS_SUCCESS;
+	}
+
 exit:
 
 	Trace(

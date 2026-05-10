@@ -169,6 +169,12 @@ typedef struct _FTS521_CONFIGURATION
 } FTS521_CONFIGURATION;
 
 
+typedef struct _FTS521_FIRMWARE_INFO
+{
+	USHORT FwVersion;
+	USHORT CfgVersion;
+} FTS521_FIRMWARE_INFO;
+
 typedef struct _FTS521_CONTROLLER_CONTEXT
 {
 	WDFDEVICE FxDevice;
@@ -188,6 +194,11 @@ typedef struct _FTS521_CONTROLLER_CONTEXT
 	BYTE MaxFingers;
 
 	DETECTED_OBJECTS DetectedObjects;
+
+	//
+	// Firmware version information read from the IC on startup
+	//
+	FTS521_FIRMWARE_INFO FirmwareInfo;
 } FTS521_CONTROLLER_CONTEXT;
 
 NTSTATUS
@@ -257,6 +268,12 @@ Fts521CheckInterrupts(
 
 NTSTATUS
 Fts521ConfigureInterruptEnable(
+	IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
+	IN SPB_CONTEXT* SpbContext
+);
+
+NTSTATUS
+Fts521ReadFirmwareVersion(
 	IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
 	IN SPB_CONTEXT* SpbContext
 );

@@ -36,7 +36,7 @@ Fts521ServiceInterrupts(
 	FTS521_CONTROLLER_CONTEXT* controller;
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"Fts521ServiceInterrupts - Entry");
 
@@ -65,7 +65,7 @@ exit:
 	WdfWaitLockRelease(controller->ControllerLock);
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"Fts521ServiceInterrupts - Exit");
 
@@ -82,12 +82,12 @@ Fts521BuildFunctionsTable(
 	  UNREFERENCED_PARAMETER(ControllerContext);
 
 	  Trace(
-		  TRACE_LEVEL_ERROR,
+		  TRACE_LEVEL_INFORMATION,
 		  TRACE_REPORTING,
 		  "Fts521BuildFunctionsTable - Entry");
 
 	  Trace(
-		  TRACE_LEVEL_ERROR,
+		  TRACE_LEVEL_INFORMATION,
 		  TRACE_REPORTING,
 		  "Fts521BuildFunctionsTable - Exit");
 
@@ -106,12 +106,12 @@ Fts521ChangePage(
 	  UNREFERENCED_PARAMETER(DesiredPage);
 
 	  Trace(
-		  TRACE_LEVEL_ERROR,
+		  TRACE_LEVEL_INFORMATION,
 		  TRACE_REPORTING,
 		  "Fts521ChangePage - Entry");
 
 	  Trace(
-		  TRACE_LEVEL_ERROR,
+		  TRACE_LEVEL_INFORMATION,
 		  TRACE_REPORTING,
 		  "Fts521ChangePage - Exit");
 
@@ -127,7 +127,7 @@ Fts521ConfigureFunctions(
 	NTSTATUS status;
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"Fts521ConfigureFunctions - Entry");
 
@@ -184,7 +184,7 @@ Fts521ConfigureFunctions(
 	Fts521SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"Fts521ConfigureFunctions - Exit");
 
@@ -242,12 +242,12 @@ Fts521SetReportingFlags(
 	  UNREFERENCED_PARAMETER(OldMode);
 
 	  Trace(
-		  TRACE_LEVEL_ERROR,
+		  TRACE_LEVEL_INFORMATION,
 		  TRACE_REPORTING,
 		  "Fts521SetReportingFlags - Entry");
 
 	  Trace(
-		  TRACE_LEVEL_ERROR,
+		  TRACE_LEVEL_INFORMATION,
 		  TRACE_REPORTING,
 		  "Fts521SetReportingFlags - Exit");
 
@@ -267,12 +267,12 @@ Fts521ChangeChargerConnectedState(
 	UNREFERENCED_PARAMETER(ChargerConnectedState);
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"Fts521ChangeChargerConnectedState - Entry");
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"Fts521ChangeChargerConnectedState - Exit");
 
@@ -286,21 +286,38 @@ Fts521ChangeSleepState(
 	IN UCHAR SleepState
 )
 {
-	  UNREFERENCED_PARAMETER(SpbContext);
-	  UNREFERENCED_PARAMETER(ControllerContext);
-	  UNREFERENCED_PARAMETER(SleepState);
+	NTSTATUS status;
 
-	  Trace(
-		  TRACE_LEVEL_ERROR,
-		  TRACE_REPORTING,
-		  "Fts521ChangeSleepState - Entry");
+	UNREFERENCED_PARAMETER(ControllerContext);
 
-	  Trace(
-		  TRACE_LEVEL_ERROR,
-		  TRACE_REPORTING,
-		  "Fts521ChangeSleepState - Exit");
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"Fts521ChangeSleepState - Entry");
 
-	  return STATUS_SUCCESS;
+	if (SleepState == FTS521_F01_DEVICE_CONTROL_SLEEP_MODE_SLEEPING)
+	{
+		//
+		// Put the IC into low-power scan mode to stop generating interrupts
+		// and reduce power consumption during standby or system shutdown.
+		//
+		status = Fts521SetScanMode(SpbContext, SCAN_MODE_LOW_POWER, 0x00);
+	}
+	else
+	{
+		//
+		// Resume active scanning.
+		//
+		status = Fts521SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
+	}
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"Fts521ChangeSleepState - Exit - 0x%08lX",
+		status);
+
+	return status;
 }
 
 NTSTATUS
@@ -315,12 +332,12 @@ Fts521CheckInterrupts(
 	  UNREFERENCED_PARAMETER(InterruptStatus);
 
 	  Trace(
-		  TRACE_LEVEL_ERROR,
+		  TRACE_LEVEL_INFORMATION,
 		  TRACE_REPORTING,
 		  "Fts521CheckInterrupts - Entry");
 
 	  Trace(
-		  TRACE_LEVEL_ERROR,
+		  TRACE_LEVEL_INFORMATION,
 		  TRACE_REPORTING,
 		  "Fts521CheckInterrupts - Exit");
 
@@ -337,14 +354,131 @@ Fts521ConfigureInterruptEnable(
 	  UNREFERENCED_PARAMETER(ControllerContext);
 
 	  Trace(
-		  TRACE_LEVEL_ERROR,
+		  TRACE_LEVEL_INFORMATION,
 		  TRACE_REPORTING,
 		  "Fts521ConfigureInterruptEnable - Entry");
 
 	  Trace(
-		  TRACE_LEVEL_ERROR,
+		  TRACE_LEVEL_INFORMATION,
 		  TRACE_REPORTING,
 		  "Fts521ConfigureInterruptEnable - Exit");
 
 	  return STATUS_SUCCESS;
+}
+
+NTSTATUS
+Fts521ReadFirmwareVersion(
+	IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
+	IN SPB_CONTEXT* SpbContext
+)
+/*++
+
+  Routine Description:
+
+	Reads firmware version information from the IC system info framebuffer.
+	The IC is requested to reload its system info, then the framebuffer is
+	read and parsed to extract the firmware version and config version.
+
+	Protocol reference (from ST Android driver, fts_lib/ftsCore.c):
+	  - Send FTS_CMD_SYSTEM (0xA4) + SYS_CMD_LOAD_DATA (0x06) + LOAD_SYS_INFO (0x01)
+	  - Read SYS_INFO_SIZE (208) bytes from framebuffer at address 0xA6 0x00 0x00
+	  - First byte read is a dummy byte (I2C interface)
+	  - Header signature (0xA5) is at data[0] after dummy, i.e. sysInfoBuf[1]
+	  - u16_fwVer  (little-endian) is at data offset 16, i.e. sysInfoBuf[17..18]
+	  - u16_cfgVer (little-endian) is at data offset 20, i.e. sysInfoBuf[21..22]
+
+  Arguments:
+
+	ControllerContext - Touch controller context
+
+	SpbContext - A pointer to the current I2C context
+
+  Return Value:
+
+	NTSTATUS indicating success or failure
+
+--*/
+{
+	NTSTATUS status;
+	LARGE_INTEGER delay;
+
+	//
+	// FTS_CMD_SYSTEM=0xA4, SYS_CMD_LOAD_DATA=0x06, LOAD_SYS_INFO=0x01
+	//
+	BYTE loadSysInfoCmd[2] = { 0x06, 0x01 };
+	status = SpbWriteDataSynchronously(SpbContext, 0xA4, loadSysInfoCmd, sizeof(loadSysInfoCmd));
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INIT,
+			"Fts521ReadFirmwareVersion - Error sending load sys info command - 0x%08lX",
+			status);
+		return status;
+	}
+
+	//
+	// Wait for the IC to load system info into the framebuffer.
+	//
+	delay.QuadPart = RELATIVE(MILLISECONDS(50));
+	KeDelayExecutionThread(KernelMode, TRUE, &delay);
+
+	//
+	// FTS_CMD_FRAMEBUFFER_R=0xA6, ADDR_FRAMEBUFFER=0x0000 (2 bytes)
+	// For I2C interface, the first byte returned is a dummy byte,
+	// so read SYS_INFO_SIZE (208) + 1 dummy = 209 bytes total.
+	//
+	BYTE framebufferCmd[3] = { 0xA6, 0x00, 0x00 };
+	BYTE sysInfoBuf[209];
+	RtlZeroMemory(sysInfoBuf, sizeof(sysInfoBuf));
+
+	status = FtsWriteReadU8UX(SpbContext, framebufferCmd, sizeof(framebufferCmd), sysInfoBuf, sizeof(sysInfoBuf));
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INIT,
+			"Fts521ReadFirmwareVersion - Error reading framebuffer - 0x%08lX",
+			status);
+		return status;
+	}
+
+	//
+	// Validate the header signature (HEADER_SIGNATURE = 0xA5).
+	// sysInfoBuf[0] is the dummy byte; actual data starts at sysInfoBuf[1].
+	//
+	if (sysInfoBuf[1] != 0xA5)
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INIT,
+			"Fts521ReadFirmwareVersion - Invalid header signature: 0x%02X (expected 0xA5)",
+			sysInfoBuf[1]);
+		return STATUS_DEVICE_DATA_ERROR;
+	}
+
+	//
+	// Parse firmware version (u16_fwVer) at data offset 16 (little-endian).
+	// With the leading dummy byte: index = 1 + 16 = 17.
+	//
+	ControllerContext->FirmwareInfo.FwVersion =
+		(USHORT)(sysInfoBuf[17] | ((USHORT)sysInfoBuf[18] << 8));
+
+	//
+	// Parse config version (u16_cfgVer) at data offset 20 (little-endian).
+	// With the leading dummy byte: index = 1 + 20 = 21.
+	//
+	ControllerContext->FirmwareInfo.CfgVersion =
+		(USHORT)(sysInfoBuf[21] | ((USHORT)sysInfoBuf[22] << 8));
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INIT,
+		"Fts521ReadFirmwareVersion - FW Version: 0x%04X, Config Version: 0x%04X",
+		ControllerContext->FirmwareInfo.FwVersion,
+		ControllerContext->FirmwareInfo.CfgVersion);
+
+	return STATUS_SUCCESS;
 }

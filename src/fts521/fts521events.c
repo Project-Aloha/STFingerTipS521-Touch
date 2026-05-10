@@ -96,7 +96,7 @@ TchServiceObjectInterrupts(
 )
 {
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"TchServiceObjectInterrupts - Entry");
 
@@ -112,7 +112,7 @@ TchServiceObjectInterrupts(
 	BYTE EventBuffer[256];
 	BYTE FTS521_READ_EVENTS[1] = { 0x86 };
 
-	status = FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, 1, &EventBuffer[0], 8);
+	status = FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, 1, &EventBuffer[0], FIFO_EVENT_SIZE);
 
 	if (!NT_SUCCESS(status))
 	{
@@ -125,15 +125,27 @@ TchServiceObjectInterrupts(
 		goto exit;
 	}
 
+	//
+	// Byte 7 of the first event indicates how many additional events
+	// remain in the FIFO. Cap to the available buffer space.
+	//
 	remain = EventBuffer[7];
+	if (remain > (int)((sizeof(EventBuffer) / FIFO_EVENT_SIZE) - 1))
+	{
+		remain = (int)((sizeof(EventBuffer) / FIFO_EVENT_SIZE) - 1);
+	}
+
 	if (remain > 0)
 	{
-		FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, 1, &EventBuffer[8], 10);
+		//
+		// Read remaining events: each is FIFO_EVENT_SIZE bytes.
+		//
+		FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, 1, &EventBuffer[FIFO_EVENT_SIZE], remain * FIFO_EVENT_SIZE);
 	}
 
 	for (int CurrentEventId = 0; CurrentEventId < remain + 1; CurrentEventId++)
 	{
-		i = CurrentEventId * 8;
+		i = CurrentEventId * FIFO_EVENT_SIZE;
 
 		// Process the event
 		status = Fts521ProcessEvent(controller, ReportContext, EventBuffer + i);
@@ -153,7 +165,7 @@ TchServiceObjectInterrupts(
 exit:
 
 	Trace(
-		TRACE_LEVEL_ERROR,
+		TRACE_LEVEL_INFORMATION,
 		TRACE_REPORTING,
 		"TchServiceObjectInterrupts - Exit\n");
 
