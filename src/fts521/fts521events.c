@@ -130,9 +130,9 @@ TchServiceObjectInterrupts(
 	// remain in the FIFO. Cap to the available buffer space.
 	//
 	remain = EventBuffer[7];
-	if (remain > (int)((sizeof(EventBuffer) / FIFO_EVENT_SIZE) - 1))
+	if (remain > FIFO_MAX_REMAIN_EVENTS)
 	{
-		remain = (int)((sizeof(EventBuffer) / FIFO_EVENT_SIZE) - 1);
+		remain = FIFO_MAX_REMAIN_EVENTS;
 	}
 
 	if (remain > 0)

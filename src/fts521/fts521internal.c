@@ -403,10 +403,10 @@ Fts521ReadFirmwareVersion(
 	LARGE_INTEGER delay;
 
 	//
-	// FTS_CMD_SYSTEM=0xA4, SYS_CMD_LOAD_DATA=0x06, LOAD_SYS_INFO=0x01
+	// Request the IC to reload system info into the framebuffer.
 	//
-	BYTE loadSysInfoCmd[2] = { 0x06, 0x01 };
-	status = SpbWriteDataSynchronously(SpbContext, 0xA4, loadSysInfoCmd, sizeof(loadSysInfoCmd));
+	BYTE loadSysInfoCmd[2] = { SYS_CMD_LOAD_DATA, LOAD_SYS_INFO };
+	status = SpbWriteDataSynchronously(SpbContext, FTS_CMD_SYSTEM, loadSysInfoCmd, sizeof(loadSysInfoCmd));
 
 	if (!NT_SUCCESS(status))
 	{
@@ -425,12 +425,11 @@ Fts521ReadFirmwareVersion(
 	KeDelayExecutionThread(KernelMode, TRUE, &delay);
 
 	//
-	// FTS_CMD_FRAMEBUFFER_R=0xA6, ADDR_FRAMEBUFFER=0x0000 (2 bytes)
-	// For I2C interface, the first byte returned is a dummy byte,
-	// so read SYS_INFO_SIZE (208) + 1 dummy = 209 bytes total.
+	// Read the framebuffer. For I2C, the first byte returned is a dummy byte,
+	// so SYS_INFO_BUF_SIZE = SYS_INFO_SIZE + 1.
 	//
-	BYTE framebufferCmd[3] = { 0xA6, 0x00, 0x00 };
-	BYTE sysInfoBuf[209];
+	BYTE framebufferCmd[3] = { FTS_CMD_FRAMEBUFFER_R, ADDR_FRAMEBUFFER_HIGH, ADDR_FRAMEBUFFER_LOW };
+	BYTE sysInfoBuf[SYS_INFO_BUF_SIZE];
 	RtlZeroMemory(sysInfoBuf, sizeof(sysInfoBuf));
 
 	status = FtsWriteReadU8UX(SpbContext, framebufferCmd, sizeof(framebufferCmd), sysInfoBuf, sizeof(sysInfoBuf));
@@ -446,32 +445,29 @@ Fts521ReadFirmwareVersion(
 	}
 
 	//
-	// Validate the header signature (HEADER_SIGNATURE = 0xA5).
-	// sysInfoBuf[0] is the dummy byte; actual data starts at sysInfoBuf[1].
+	// Validate the header signature. sysInfoBuf[0] is the dummy byte;
+	// actual data starts at sysInfoBuf[1].
 	//
-	if (sysInfoBuf[1] != 0xA5)
+	if (sysInfoBuf[1] != HEADER_SIGNATURE)
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_INIT,
-			"Fts521ReadFirmwareVersion - Invalid header signature: 0x%02X (expected 0xA5)",
-			sysInfoBuf[1]);
+			"Fts521ReadFirmwareVersion - Invalid header signature: 0x%02X (expected 0x%02X)",
+			sysInfoBuf[1],
+			HEADER_SIGNATURE);
 		return STATUS_DEVICE_DATA_ERROR;
 	}
 
 	//
-	// Parse firmware version (u16_fwVer) at data offset 16 (little-endian).
-	// With the leading dummy byte: index = 1 + 16 = 17.
+	// Parse firmware version (u16_fwVer, little-endian) at SYS_INFO_FW_VER_OFFSET.
+	// Parse config version (u16_cfgVer, little-endian) at SYS_INFO_CFG_VER_OFFSET.
 	//
 	ControllerContext->FirmwareInfo.FwVersion =
-		(USHORT)(sysInfoBuf[17] | ((USHORT)sysInfoBuf[18] << 8));
+		(USHORT)(sysInfoBuf[SYS_INFO_FW_VER_OFFSET] | ((USHORT)sysInfoBuf[SYS_INFO_FW_VER_OFFSET + 1] << 8));
 
-	//
-	// Parse config version (u16_cfgVer) at data offset 20 (little-endian).
-	// With the leading dummy byte: index = 1 + 20 = 21.
-	//
 	ControllerContext->FirmwareInfo.CfgVersion =
-		(USHORT)(sysInfoBuf[21] | ((USHORT)sysInfoBuf[22] << 8));
+		(USHORT)(sysInfoBuf[SYS_INFO_CFG_VER_OFFSET] | ((USHORT)sysInfoBuf[SYS_INFO_CFG_VER_OFFSET + 1] << 8));
 
 	Trace(
 		TRACE_LEVEL_INFORMATION,
