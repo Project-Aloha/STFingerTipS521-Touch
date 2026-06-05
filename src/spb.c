@@ -22,6 +22,7 @@
 #include <internal.h>
 #include <controller.h>
 #include "spb.h"
+#include <../shared/spb.h>
 #include <spb.tmh>
 
 #define I2C_VERBOSE_LOGGING 1
@@ -39,46 +40,76 @@ FtsWriteReadU8UX(
 	IN ULONG DataLength
 )
 {
-	WDF_MEMORY_DESCRIPTOR  AddressMemoryDescriptor;
-	WDF_MEMORY_DESCRIPTOR  DataMemoryDescriptor;
-	ULONG_PTR  bytesWritten = (ULONG_PTR)NULL;
-	ULONG_PTR  bytesRead = (ULONG_PTR)NULL;
+	SPB_TRANSFER_LIST_AND_ENTRIES(2) sequence;
+	WDF_MEMORY_DESCRIPTOR sequenceDescriptor;
+	ULONG_PTR bytesReturned;
 	NTSTATUS status;
+	LONGLONG lockTimeout;
+	WDF_REQUEST_SEND_OPTIONS requestOptions;
 
+	if (SpbContext == NULL ||
+		Address == NULL ||
+		AddressLength == 0 ||
+		Data == NULL ||
+		DataLength == 0)
+	{
+		return STATUS_INVALID_PARAMETER;
+	}
 
-	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&AddressMemoryDescriptor,
-		Address,
-		AddressLength);
-
-	status = WdfIoTargetSendWriteSynchronously(
-		SpbContext->SpbIoTarget,
-		NULL,
-		&AddressMemoryDescriptor,
-		NULL,
-		NULL,
-		&bytesWritten);
+	lockTimeout = TOUCH_REL_TIMEOUT_MS(TOUCH_SPB_LOCK_TIMEOUT_MS);
+	status = WdfWaitLockAcquire(SpbContext->SpbLock, &lockTimeout);
 	if (!NT_SUCCESS(status))
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_SPB,
-			"Error writing to Spb - 0x%08lX",
+			"Timeout acquiring Spb lock for write/read after %lu ms - 0x%08lX",
+			(ULONG)TOUCH_SPB_LOCK_TIMEOUT_MS,
 			status);
+		goto exit;
 	}
 
-
-	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&DataMemoryDescriptor,
+	SPB_TRANSFER_LIST_INIT(&sequence.List, 2);
+	sequence.List.Transfers[0] = SPB_TRANSFER_LIST_ENTRY_INIT_NON_PAGED(
+		SpbTransferDirectionToDevice,
+		0,
+		Address,
+		AddressLength);
+	sequence.ExtraTransfers[0] = SPB_TRANSFER_LIST_ENTRY_INIT_NON_PAGED(
+		SpbTransferDirectionFromDevice,
+		0,
 		Data,
 		DataLength);
 
-	status = WdfIoTargetSendReadSynchronously(
+	WDF_REQUEST_SEND_OPTIONS_INIT(&requestOptions, WDF_REQUEST_SEND_OPTION_TIMEOUT);
+	WDF_REQUEST_SEND_OPTIONS_SET_TIMEOUT(&requestOptions, TOUCH_REL_TIMEOUT_MS(TOUCH_SPB_TRANSFER_TIMEOUT_MS));
+	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&sequenceDescriptor, &sequence, sizeof(sequence));
+	bytesReturned = 0;
+
+	status = WdfIoTargetSendIoctlSynchronously(
 		SpbContext->SpbIoTarget,
 		NULL,
-		&DataMemoryDescriptor,
+		IOCTL_SPB_EXECUTE_SEQUENCE,
+		&sequenceDescriptor,
 		NULL,
-		NULL,
-		&bytesRead
-	);
+		&requestOptions,
+		&bytesReturned);
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_SPB,
+			"Error executing Spb write/read sequence addressBytes=%lu dataBytes=%lu timeout=%lu ms - 0x%08lX",
+			AddressLength,
+			DataLength,
+			(ULONG)TOUCH_SPB_TRANSFER_TIMEOUT_MS,
+			status);
+	}
+
+exit_release_lock:
+	WdfWaitLockRelease(SpbContext->SpbLock);
+
+exit:
 	return status;
 }
 
@@ -114,6 +145,7 @@ SpbDoWriteDataSynchronously(
 	WDFMEMORY memory;
 	WDF_MEMORY_DESCRIPTOR memoryDescriptor;
 	NTSTATUS status;
+	WDF_REQUEST_SEND_OPTIONS requestOptions;
 
 	//
 	// The address pointer and data buffer must be combined
@@ -165,7 +197,10 @@ SpbDoWriteDataSynchronously(
 	//
 	// Address is followed by the data payload
 	//
-	RtlCopyMemory((buffer + sizeof(Address)), Data, length - sizeof(Address));
+	if (Length > 0)
+	{
+		RtlCopyMemory((buffer + sizeof(Address)), Data, length - sizeof(Address));
+	}
 
 #if I2C_VERBOSE_LOGGING
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "I2CWRITE: LENGTH=%d", length);
@@ -177,12 +212,15 @@ SpbDoWriteDataSynchronously(
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "\n");
 #endif
 
+	WDF_REQUEST_SEND_OPTIONS_INIT(&requestOptions, WDF_REQUEST_SEND_OPTION_TIMEOUT);
+	WDF_REQUEST_SEND_OPTIONS_SET_TIMEOUT(&requestOptions, TOUCH_REL_TIMEOUT_MS(TOUCH_SPB_TRANSFER_TIMEOUT_MS));
+
 	status = WdfIoTargetSendWriteSynchronously(
 		SpbContext->SpbIoTarget,
 		NULL,
 		&memoryDescriptor,
 		NULL,
-		NULL,
+		&requestOptions,
 		NULL);
 
 	if (!NT_SUCCESS(status))
@@ -190,7 +228,9 @@ SpbDoWriteDataSynchronously(
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_SPB,
-			"Error writing to Spb - 0x%08lX",
+			"Error writing %lu byte(s) to Spb after %lu ms timeout - 0x%08lX",
+			length,
+			(ULONG)TOUCH_SPB_TRANSFER_TIMEOUT_MS,
 			status);
 		goto exit;
 	}
@@ -234,8 +274,20 @@ SpbWriteDataSynchronously(
 --*/
 {
 	NTSTATUS status;
+	LONGLONG lockTimeout;
 
-	WdfWaitLockAcquire(SpbContext->SpbLock, NULL);
+	lockTimeout = TOUCH_REL_TIMEOUT_MS(TOUCH_SPB_LOCK_TIMEOUT_MS);
+	status = WdfWaitLockAcquire(SpbContext->SpbLock, &lockTimeout);
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_SPB,
+			"Timeout acquiring Spb lock for write after %lu ms - 0x%08lX",
+			(ULONG)TOUCH_SPB_LOCK_TIMEOUT_MS,
+			status);
+		return status;
+	}
 
 	status = SpbDoWriteDataSynchronously(
 		SpbContext,
@@ -275,114 +327,34 @@ SpbReadDataSynchronously(
 
 --*/
 {
-	PUCHAR buffer;
-	WDFMEMORY memory;
-	WDF_MEMORY_DESCRIPTOR memoryDescriptor;
 	NTSTATUS status;
-	ULONG_PTR bytesRead;
 
-	WdfWaitLockAcquire(SpbContext->SpbLock, NULL);
-
-	memory = NULL;
-	status = STATUS_INVALID_PARAMETER;
-	bytesRead = 0;
-
-	//
-	// Read transactions start by writing an address pointer
-	//
-	status = SpbDoWriteDataSynchronously(
+	status = FtsWriteReadU8UX(
 		SpbContext,
-		Address,
-		NULL,
-		0);
-
+		&Address,
+		sizeof(Address),
+		Data,
+		Length);
 	if (!NT_SUCCESS(status))
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_SPB,
-			"Error setting address pointer for Spb read - 0x%08lX",
-			status);
-		goto exit;
-	}
-
-	if (Length > DEFAULT_SPB_BUFFER_SIZE)
-	{
-		status = WdfMemoryCreate(
-			WDF_NO_OBJECT_ATTRIBUTES,
-			NonPagedPool,
-			TOUCH_POOL_TAG,
+			"Error reading %lu byte(s) from Spb register 0x%02X - 0x%08lX",
 			Length,
-			&memory,
-			&buffer);
-
-		if (!NT_SUCCESS(status))
-		{
-			Trace(
-				TRACE_LEVEL_ERROR,
-				TRACE_SPB,
-				"Error allocating memory for Spb read - 0x%08lX",
-				status);
-			goto exit;
-		}
-
-		WDF_MEMORY_DESCRIPTOR_INIT_HANDLE(
-			&memoryDescriptor,
-			memory,
-			NULL);
-	}
-	else
-	{
-		buffer = (PUCHAR)WdfMemoryGetBuffer(SpbContext->ReadMemory, NULL);
-
-		WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(
-			&memoryDescriptor,
-			(PVOID)buffer,
-			Length);
-	}
-
-
-	status = WdfIoTargetSendReadSynchronously(
-		SpbContext->SpbIoTarget,
-		NULL,
-		&memoryDescriptor,
-		NULL,
-		NULL,
-		&bytesRead);
-
-	if (!NT_SUCCESS(status) ||
-		bytesRead != Length)
-	{
-		Trace(
-			TRACE_LEVEL_ERROR,
-			TRACE_SPB,
-			"Error reading from Spb - 0x%08lX",
+			Address,
 			status);
-		goto exit;
 	}
 
 #if I2C_VERBOSE_LOGGING
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "I2CREAD: LENGTH=%d", Length);
 	for (ULONG j = 0; j < Length; j++)
 	{
-		UCHAR byte = *(buffer + j);
+		UCHAR byte = *((PUCHAR)Data + j);
 		DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, " %02hhX", byte);
 	}
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "\n");
 #endif
-
-	//
-	// Copy back to the caller's buffer
-	//
-	RtlCopyMemory(Data, buffer, Length);
-
-exit:
-	if (NULL != memory)
-	{
-		WdfObjectDelete(memory);
-	}
-
-	WdfWaitLockRelease(SpbContext->SpbLock);
 
 	return status;
 }

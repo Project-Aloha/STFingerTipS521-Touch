@@ -25,6 +25,7 @@
 #include <device.h>
 #include <hid.h>
 #include <queue.h>
+#include <idle.h>
 #include <selftest\selftest.h>
 #include <driver.h>
 #include <driver.tmh>
@@ -182,6 +183,61 @@ Return Value:
 	devContext = GetDeviceContext(fxDevice);
 	devContext->FxDevice = fxDevice;
 	devContext->InputMode = MODE_MULTI_TOUCH;
+	devContext->RuntimeState = TouchRuntimeUninitialized;
+	devContext->InterruptState = TouchInterruptNotCreated;
+	devContext->ResetState = TouchResetIdle;
+	devContext->LastDisplayState = TOUCH_DISPLAY_STATE_UNKNOWN;
+	RtlZeroMemory(devContext->DisplayStateQueue, sizeof(devContext->DisplayStateQueue));
+	devContext->DisplayStateQueueHead = 0;
+	devContext->DisplayStateQueueCount = 0;
+	devContext->DisplayStateSequence = 0;
+	devContext->DisplayStateWorkQueued = FALSE;
+	devContext->DisplayStateHardwareReady = FALSE;
+	devContext->DisplayStateAcceptingWork = FALSE;
+	devContext->IdleState = TouchIdleNone;
+	devContext->IdleRequest = NULL;
+	devContext->IdleCompletionStatus = STATUS_SUCCESS;
+	devContext->IdleSequence = 0;
+
+	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
+	attributes.ParentObject = fxDevice;
+	status = WdfWaitLockCreate(&attributes, &devContext->IdleLock);
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INIT,
+			"Error creating idle state lock - 0x%08lX",
+			status);
+
+		goto exit;
+	}
+
+	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
+	attributes.ParentObject = fxDevice;
+	status = WdfWaitLockCreate(&attributes, &devContext->DisplayStateLock);
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INIT,
+			"Error creating display state lock - 0x%08lX",
+			status);
+
+		goto exit;
+	}
+
+	status = TchCreateDisplayStateWorker(fxDevice);
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INIT,
+			"Error creating display state work item - 0x%08lX",
+			status);
+
+		goto exit;
+	}
 
 	//
 	// Create a parallel dispatch queue to handle requests from HID Class
@@ -245,6 +301,7 @@ Return Value:
 	WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchManual);
 
 	queueConfig.PowerManaged = WdfFalse;
+	queueConfig.EvtIoCanceledOnQueue = TchIdleRequestCanceledOnQueue;
 
 	status = WdfIoQueueCreate(
 		fxDevice,
@@ -271,6 +328,8 @@ Return Value:
 		&interruptConfig,
 		OnInterruptIsr,
 		NULL);
+	interruptConfig.EvtInterruptEnable = OnInterruptEnable;
+	interruptConfig.EvtInterruptDisable = OnInterruptDisable;
 	interruptConfig.PassiveHandling = TRUE;
 
 	status = WdfInterruptCreate(
@@ -279,14 +338,9 @@ Return Value:
 		WDF_NO_OBJECT_ATTRIBUTES,
 		&devContext->InterruptObject);
 
-	//
-	// Disable the interrupt when the device is started for the first time, 
-	// and re-enable it until the TchPowerSettingCallback method is executed, 
-	// so as to avoid conflicts in the operations of the interrupt.
-	//
 	if (NT_SUCCESS(status))
 	{
-		WdfInterruptDisable(devContext->InterruptObject);
+		devContext->InterruptState = TouchInterruptCreated;
 	}
 
 	if (!NT_SUCCESS(status))

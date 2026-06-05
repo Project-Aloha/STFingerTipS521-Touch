@@ -37,6 +37,66 @@ DEFINE_GUID2(GUID_CONSOLE_DISPLAY_STATE, 0x6fe69556, 0x704a, 0x47a0, 0x8f, 0x24,
 
 #define TOUCH_DELAY_TO_COMMUNICATE 200000
 #define TOUCH_POWER_RAIL_STABLE_TIME 2000
+#define TOUCH_CONTROLLER_LOCK_TIMEOUT_MS 5000
+#define TOUCH_SPB_LOCK_TIMEOUT_MS 5000
+#define TOUCH_SPB_TRANSFER_TIMEOUT_MS 5000
+#define TOUCH_GPIO_TRANSFER_TIMEOUT_MS 5000
+#define TOUCH_FTS_COMMAND_ECHO_TIMEOUT_MS 2500
+#define TOUCH_FTS_COMMAND_ECHO_POLL_INTERVAL_MS 50
+#define TOUCH_CONTROLLER_READY_TIMEOUT_MS 3000
+#define TOUCH_CONTROLLER_READY_POLL_INTERVAL_MS 20
+#define TOUCH_CONTROLLER_RESET_ATTEMPTS 3
+#define TOUCH_HID_IDLE_D3_WAKE_SUPPORTED 0
+#define TOUCH_DISPLAY_STATE_UNKNOWN ((ULONG)-1)
+#define TOUCH_DISPLAY_STATE_QUEUE_DEPTH 16
+#define TOUCH_REL_TIMEOUT_MS(ms) (-(10 * 1000 * (LONGLONG)(ms)))
+
+typedef enum _TOUCH_RUNTIME_STATE
+{
+	TouchRuntimeUninitialized = 0,
+	TouchRuntimePrepared,
+	TouchRuntimeStarted,
+	TouchRuntimeD0Active,
+	TouchRuntimeDisplayOff,
+	TouchRuntimeResetting,
+	TouchRuntimeD3,
+	TouchRuntimeFailed
+} TOUCH_RUNTIME_STATE;
+
+typedef enum _TOUCH_INTERRUPT_STATE
+{
+	TouchInterruptNotCreated = 0,
+	TouchInterruptCreated,
+	TouchInterruptWdfEnabled,
+	TouchInterruptWdfDisabled
+} TOUCH_INTERRUPT_STATE;
+
+typedef enum _TOUCH_RESET_STATE
+{
+	TouchResetIdle = 0,
+	TouchResetAssertLow,
+	TouchResetReleaseHigh,
+	TouchResetWaitControllerReady,
+	TouchResetComplete,
+	TouchResetFailed
+} TOUCH_RESET_STATE;
+
+typedef enum _TOUCH_IDLE_STATE
+{
+	TouchIdleNone = 0,
+	TouchIdleCallbackQueued,
+	TouchIdleForwarding,
+	TouchIdleCompletionRequested,
+	TouchIdleParked,
+	TouchIdleCompleting
+} TOUCH_IDLE_STATE;
+
+typedef struct _TOUCH_DISPLAY_STATE_EVENT
+{
+	ULONG DisplayState;
+	ULONG PreviousDisplayState;
+	ULONG Sequence;
+} TOUCH_DISPLAY_STATE_EVENT;
 
 typedef struct _TOUCH_POWER_CONTEXT
 {
@@ -67,6 +127,10 @@ typedef struct _DEVICE_EXTENSION
 	//
 	WDFINTERRUPT InterruptObject;
 	BOOLEAN ServiceInterruptsAfterD0Entry;
+	TOUCH_INTERRUPT_STATE InterruptState;
+	TOUCH_RUNTIME_STATE RuntimeState;
+	TOUCH_RESET_STATE ResetState;
+	ULONG LastDisplayState;
 	
 	//
 	// Spb (I2C) related members used for the lifetime of the device
@@ -87,10 +151,24 @@ typedef struct _DEVICE_EXTENSION
 	volatile LONG TestSessionRefCnt;
 	BOOLEAN DiagnosticMode;
 
-	// 
+	//
 	// Power related
 	//
 	WDFQUEUE IdleQueue;
+	WDFWAITLOCK IdleLock;
+	WDFREQUEST IdleRequest;
+	TOUCH_IDLE_STATE IdleState;
+	NTSTATUS IdleCompletionStatus;
+	ULONG IdleSequence;
+	WDFWAITLOCK DisplayStateLock;
+	WDFWORKITEM DisplayStateWorkItem;
+	TOUCH_DISPLAY_STATE_EVENT DisplayStateQueue[TOUCH_DISPLAY_STATE_QUEUE_DEPTH];
+	ULONG DisplayStateQueueHead;
+	ULONG DisplayStateQueueCount;
+	ULONG DisplayStateSequence;
+	BOOLEAN DisplayStateWorkQueued;
+	BOOLEAN DisplayStateHardwareReady;
+	BOOLEAN DisplayStateAcceptingWork;
 
 	//
 	// Touch related members used for the lifetime of the device
@@ -124,5 +202,34 @@ typedef struct _DEVICE_EXTENSION
 	//
 	TOUCH_POWER_CONTEXT TouchPowerContext;
 } DEVICE_EXTENSION, *PDEVICE_EXTENSION;
+
+NTSTATUS
+TchRestoreConsoleDisplayState(
+	IN PDEVICE_EXTENSION DevContext,
+	IN PCSTR Source
+);
+
+NTSTATUS
+TchCreateDisplayStateWorker(
+	IN WDFDEVICE FxDevice
+);
+
+VOID
+TchFlushDisplayStateWorker(
+	IN PDEVICE_EXTENSION DevContext,
+	IN PCSTR Source
+);
+
+NTSTATUS
+TchStopDisplayStateHardwareWork(
+	IN PDEVICE_EXTENSION DevContext,
+	IN PCSTR Source
+);
+
+NTSTATUS
+TchDisableDisplayStateHardwareWork(
+	IN PDEVICE_EXTENSION DevContext,
+	IN PCSTR Source
+);
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(DEVICE_EXTENSION, GetDeviceContext)

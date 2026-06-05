@@ -110,9 +110,9 @@ TchServiceObjectInterrupts(
 	int  i = 0;
 	int  remain = 0;
 	BYTE EventBuffer[256];
-	BYTE FTS521_READ_EVENTS[1] = { 0x86 };
+	BYTE FTS521_READ_EVENTS[1] = { FIFO_CMD_READONE };
 
-	status = FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, 1, &EventBuffer[0], 8);
+	status = FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, 1, &EventBuffer[0], FIFO_EVENT_SIZE);
 
 	if (!NT_SUCCESS(status))
 	{
@@ -126,14 +126,29 @@ TchServiceObjectInterrupts(
 	}
 
 	remain = EventBuffer[7];
+	if (remain > FIFO_MAX_REMAIN_EVENTS)
+	{
+		remain = FIFO_MAX_REMAIN_EVENTS;
+	}
+
 	if (remain > 0)
 	{
-		FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, 1, &EventBuffer[8], 10);
+		status = FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, 1, &EventBuffer[FIFO_EVENT_SIZE], remain * FIFO_EVENT_SIZE);
+		if (!NT_SUCCESS(status))
+		{
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_INTERRUPT,
+				"Error reading remaining touch events - 0x%08lX",
+				status);
+
+			goto exit;
+		}
 	}
 
 	for (int CurrentEventId = 0; CurrentEventId < remain + 1; CurrentEventId++)
 	{
-		i = CurrentEventId * 8;
+		i = CurrentEventId * FIFO_EVENT_SIZE;
 
 		// Process the event
 		status = Fts521ProcessEvent(controller, ReportContext, EventBuffer + i);

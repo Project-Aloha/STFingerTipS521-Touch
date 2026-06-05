@@ -27,19 +27,39 @@ SetScanMode(
 	BYTE Settings)
 {
 	NTSTATUS status;
+	BYTE scanModeData[2];
+	ULONG scanModeLength;
 
-	// FTS521_SCAN_MODE: 
-	// * Address: FTS_CMD_SCAN_MODE
-	// * { FTS_CMD_SCAN_MODE, Mode, Settings };
-	BYTE FTS521_SCAN_MODE[2] = { Mode, Settings };
-	status = SpbWriteDataSynchronously(SpbContext, FTS_CMD_SCAN_MODE, FTS521_SCAN_MODE, sizeof(FTS521_SCAN_MODE));
+	scanModeData[0] = Mode;
+	scanModeData[1] = Settings;
+
+	switch (Mode)
+	{
+	case SCAN_MODE_ACTIVE:
+		scanModeLength = 2;
+		break;
+	case SCAN_MODE_LOW_POWER:
+		scanModeLength = 1;
+		break;
+	default:
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INTERRUPT,
+			"Setting scan mode unknown mode 0x%02X",
+			Mode);
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	status = SpbWriteDataSynchronously(SpbContext, FTS_CMD_SCAN_MODE, scanModeData, scanModeLength);
 
 	if (!NT_SUCCESS(status))
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_INTERRUPT,
-			"Setting scan mode Error");
+			"Setting scan mode Error - 0x%08lX",
+			status);
+		goto exit;
 	}
 
 	Trace(
@@ -47,5 +67,6 @@ SetScanMode(
 			TRACE_INTERRUPT,
 			"Setting scan mode OK");
 
-	return STATUS_SUCCESS;
+exit:
+	return status;
 }
