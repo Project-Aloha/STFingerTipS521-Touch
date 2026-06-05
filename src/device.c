@@ -37,6 +37,100 @@
 #pragma alloc_text(PAGE, OnD0Exit)
 #endif
 
+static
+PCSTR
+TchRuntimeStateName(
+	IN TOUCH_RUNTIME_STATE State
+)
+{
+	switch (State)
+	{
+	case TouchRuntimeUninitialized:
+		return "UNINITIALIZED";
+	case TouchRuntimePrepared:
+		return "PREPARED";
+	case TouchRuntimeStarted:
+		return "STARTED";
+	case TouchRuntimeD0Active:
+		return "D0_ACTIVE";
+	case TouchRuntimeDisplayOff:
+		return "DISPLAY_OFF";
+	case TouchRuntimeResetting:
+		return "RESETTING";
+	case TouchRuntimeD3:
+		return "D3";
+	case TouchRuntimeFailed:
+		return "FAILED";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+static
+PCSTR
+TchInterruptStateName(
+	IN TOUCH_INTERRUPT_STATE State
+)
+{
+	switch (State)
+	{
+	case TouchInterruptNotCreated:
+		return "NOT_CREATED";
+	case TouchInterruptCreated:
+		return "CREATED";
+	case TouchInterruptWdfEnabled:
+		return "WDF_ENABLED";
+	case TouchInterruptWdfDisabled:
+		return "WDF_DISABLED";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+static
+VOID
+TchSetRuntimeState(
+	IN PDEVICE_EXTENSION DevContext,
+	IN TOUCH_RUNTIME_STATE NewState,
+	IN PCSTR Source
+)
+{
+	TOUCH_RUNTIME_STATE oldState;
+
+	oldState = DevContext->RuntimeState;
+	DevContext->RuntimeState = NewState;
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_POWER,
+		"%s runtime state %s -> %s",
+		Source,
+		TchRuntimeStateName(oldState),
+		TchRuntimeStateName(NewState));
+}
+
+static
+VOID
+TchSetInterruptState(
+	IN PDEVICE_EXTENSION DevContext,
+	IN TOUCH_INTERRUPT_STATE NewState,
+	IN PCSTR Source
+)
+{
+	TOUCH_INTERRUPT_STATE oldState;
+
+	oldState = DevContext->InterruptState;
+	DevContext->InterruptState = NewState;
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_POWER,
+		"%s interrupt state %s -> %s",
+		Source,
+		TchInterruptStateName(oldState),
+		TchInterruptStateName(NewState));
+}
+
 BOOLEAN
 OnInterruptIsr(
 	IN WDFINTERRUPT Interrupt,
@@ -77,6 +171,13 @@ OnInterruptIsr(
 
 	status = STATUS_SUCCESS;
 	devContext = GetDeviceContext(WdfInterruptGetDevice(Interrupt));
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INTERRUPT,
+		"OnInterruptIsr state runtime=%s interrupt=%s reset=%d",
+		TchRuntimeStateName(devContext->RuntimeState),
+		TchInterruptStateName(devContext->InterruptState),
+		devContext->ResetState);
 
 	//
 	// For performance tracing, write an ETW event marker
@@ -120,6 +221,48 @@ exit:
 }
 
 NTSTATUS
+OnInterruptEnable(
+	IN WDFINTERRUPT Interrupt,
+	IN WDFDEVICE AssociatedDevice
+)
+{
+	PDEVICE_EXTENSION devContext;
+
+	UNREFERENCED_PARAMETER(Interrupt);
+
+	devContext = GetDeviceContext(AssociatedDevice);
+	TchSetInterruptState(devContext, TouchInterruptWdfEnabled, "OnInterruptEnable");
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INTERRUPT,
+		"OnInterruptEnable - WDF connected and enabled the interrupt");
+
+	return STATUS_SUCCESS;
+}
+
+NTSTATUS
+OnInterruptDisable(
+	IN WDFINTERRUPT Interrupt,
+	IN WDFDEVICE AssociatedDevice
+)
+{
+	PDEVICE_EXTENSION devContext;
+
+	UNREFERENCED_PARAMETER(Interrupt);
+
+	devContext = GetDeviceContext(AssociatedDevice);
+	TchSetInterruptState(devContext, TouchInterruptWdfDisabled, "OnInterruptDisable");
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_INTERRUPT,
+		"OnInterruptDisable - WDF is disabling or disconnecting the interrupt");
+
+	return STATUS_SUCCESS;
+}
+
+NTSTATUS
 OnD0Entry(
 	IN WDFDEVICE Device,
 	IN WDF_POWER_DEVICE_STATE PreviousState
@@ -157,12 +300,32 @@ Return Value:
 			TRACE_POWER,
 			"Error setting device to D0 - 0x%08lX",
 			status);
+		TchSetRuntimeState(devContext, TouchRuntimeFailed, "OnD0Entry");
+		goto exit;
 	}
 
+	status = TchRestoreConsoleDisplayState(devContext, "OnD0Entry");
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_POWER,
+			"Error restoring display state in D0 - 0x%08lX",
+			status);
+		TchSetRuntimeState(devContext, TouchRuntimeFailed, "OnD0Entry");
+		goto exit;
+	}
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_POWER,
+		"OnD0Entry leaving interrupt lifecycle to KMDF, state=%s",
+		TchInterruptStateName(devContext->InterruptState));
+
+
 	//
-	// N.B. This FTS521 chip's IRQ is level-triggered, but cannot be enabled in
-	//	  ACPI until passive-level interrupt handling is added to the driver.
-	//	  Service chip in case we missed an edge during D3 or boot-up.
+	// KMDF owns interrupt connect/disconnect. Service the chip in case an
+	// interrupt asserted before a HID read request was queued.
 	//
 	devContext->ServiceInterruptsAfterD0Entry = TRUE;
 
@@ -171,6 +334,7 @@ Return Value:
 	//
 	TchCompleteIdleIrp(devContext);
 
+exit:
 	Trace(
 		TRACE_LEVEL_INFORMATION,
 		TRACE_POWER,
@@ -212,6 +376,38 @@ Return Value:
 
 	UNREFERENCED_PARAMETER(TargetState);
 
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_POWER,
+		"OnD0Exit leaving interrupt lifecycle to KMDF, state=%s",
+		TchInterruptStateName(devContext->InterruptState));
+
+	status = TchStopDisplayStateHardwareWork(devContext, "OnD0Exit");
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_POWER,
+			"Error stopping display hardware work during D0 exit - 0x%08lX",
+			status);
+		TchSetRuntimeState(devContext, TouchRuntimeFailed, "OnD0Exit");
+		return status;
+	}
+
+	TchFlushDisplayStateWorker(devContext, "OnD0Exit");
+
+	status = TchDisableDisplayStateHardwareWork(devContext, "OnD0Exit");
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_POWER,
+			"Error disabling display hardware work during D0 exit - 0x%08lX",
+			status);
+		TchSetRuntimeState(devContext, TouchRuntimeFailed, "OnD0Exit");
+		return status;
+	}
+
 	status = TchStandbyDevice(devContext->TouchContext, &devContext->I2CContext, &devContext->ReportContext);
 
 	if (!NT_SUCCESS(status))
@@ -221,6 +417,11 @@ Return Value:
 			TRACE_POWER,
 			"Error exiting D0 - 0x%08lX", 
 			status);
+		TchSetRuntimeState(devContext, TouchRuntimeFailed, "OnD0Exit");
+	}
+	else
+	{
+		TchSetRuntimeState(devContext, TouchRuntimeD3, "OnD0Exit");
 	}
 
 	return status;
@@ -234,10 +435,13 @@ GetGPIO(
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	WDF_MEMORY_DESCRIPTOR outputDescriptor;
+	WDF_REQUEST_SEND_OPTIONS requestOptions;
 
 	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&outputDescriptor, value, 1);
+	WDF_REQUEST_SEND_OPTIONS_INIT(&requestOptions, WDF_REQUEST_SEND_OPTION_TIMEOUT);
+	WDF_REQUEST_SEND_OPTIONS_SET_TIMEOUT(&requestOptions, TOUCH_REL_TIMEOUT_MS(TOUCH_GPIO_TRANSFER_TIMEOUT_MS));
 
-	status = WdfIoTargetSendIoctlSynchronously(gpio, NULL, IOCTL_GPIO_READ_PINS, NULL, &outputDescriptor, NULL, NULL);
+	status = WdfIoTargetSendIoctlSynchronously(gpio, NULL, IOCTL_GPIO_READ_PINS, NULL, &outputDescriptor, &requestOptions, NULL);
 
 	return status;
 }
@@ -250,11 +454,14 @@ SetGPIO(
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	WDF_MEMORY_DESCRIPTOR inputDescriptor, outputDescriptor;
+	WDF_REQUEST_SEND_OPTIONS requestOptions;
 
 	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&inputDescriptor, value, 1);
 	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&outputDescriptor, value, 1);
+	WDF_REQUEST_SEND_OPTIONS_INIT(&requestOptions, WDF_REQUEST_SEND_OPTION_TIMEOUT);
+	WDF_REQUEST_SEND_OPTIONS_SET_TIMEOUT(&requestOptions, TOUCH_REL_TIMEOUT_MS(TOUCH_GPIO_TRANSFER_TIMEOUT_MS));
 
-	status = WdfIoTargetSendIoctlSynchronously(gpio, NULL, IOCTL_GPIO_WRITE_PINS, &inputDescriptor, &outputDescriptor, NULL, NULL);
+	status = WdfIoTargetSendIoctlSynchronously(gpio, NULL, IOCTL_GPIO_WRITE_PINS, &inputDescriptor, &outputDescriptor, &requestOptions, NULL);
 
 	return status;
 }
@@ -322,24 +529,25 @@ SetResetGPIO(
 --*/
 	NTSTATUS status = STATUS_SUCCESS;
 	LARGE_INTEGER delay;
-	unsigned char value;
 
 	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Starting bring up sequence for the controller");
 
-	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to low");
-
-	value = 0;
-	SetGPIO(gpio, &value);
+	status = SetResetGPIOLow(gpio);
+	if (!NT_SUCCESS(status))
+	{
+		goto exit;
+	}
 
 	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Waiting...");
 
 	delay.QuadPart = -10 * TOUCH_POWER_RAIL_STABLE_TIME;
 	KeDelayExecutionThread(KernelMode, TRUE, &delay);
 
-	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to high");
-
-	value = 1;
-	SetGPIO(gpio, &value);
+	status = SetResetGPIOHigh(gpio);
+	if (!NT_SUCCESS(status))
+	{
+		goto exit;
+	}
 
 	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Waiting...");
 
@@ -347,6 +555,55 @@ SetResetGPIO(
 	KeDelayExecutionThread(KernelMode, TRUE, &delay);
 
 	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Done");
+
+exit:
+	return status;
+}
+
+NTSTATUS
+SetResetGPIOLow(
+	WDFIOTARGET gpio
+)
+{
+	NTSTATUS status;
+	unsigned char value;
+
+	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to low");
+
+	value = 0;
+	status = SetGPIO(gpio, &value);
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_DRIVER,
+			"SetResetGPIOLow failed - 0x%08lX",
+			status);
+	}
+
+	return status;
+}
+
+NTSTATUS
+SetResetGPIOHigh(
+	WDFIOTARGET gpio
+)
+{
+	NTSTATUS status;
+	unsigned char value;
+
+	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to high");
+
+	value = 1;
+	status = SetGPIO(gpio, &value);
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_DRIVER,
+			"SetResetGPIOHigh failed - 0x%08lX",
+			status);
+	}
 
 	return status;
 }
@@ -382,8 +639,13 @@ OnPrepareHardware(
 	NTSTATUS status;
 	PCM_PARTIAL_RESOURCE_DESCRIPTOR res;
 	PDEVICE_EXTENSION devContext;
+	FTS521_CONTROLLER_CONTEXT* controllerContext;
 	ULONG resourceCount;
 	ULONG i;
+	BOOLEAN spbInitialized;
+	BOOLEAN powerInitialized;
+	BOOLEAN contextAllocated;
+	BOOLEAN deviceStarted;
 
 	UNREFERENCED_PARAMETER(FxResourcesRaw);
 
@@ -391,6 +653,21 @@ OnPrepareHardware(
 
 	status = STATUS_INSUFFICIENT_RESOURCES;
 	devContext = GetDeviceContext(FxDevice);
+	controllerContext = NULL;
+	spbInitialized = FALSE;
+	powerInitialized = FALSE;
+	contextAllocated = FALSE;
+	deviceStarted = FALSE;
+	devContext->PoFxPowerSettingCallbackHandle1 = NULL;
+	devContext->PoFxPowerSettingCallbackHandle2 = NULL;
+	devContext->ResetState = TouchResetIdle;
+	devContext->LastDisplayState = TOUCH_DISPLAY_STATE_UNKNOWN;
+	RtlZeroMemory(devContext->DisplayStateQueue, sizeof(devContext->DisplayStateQueue));
+	devContext->DisplayStateQueueHead = 0;
+	devContext->DisplayStateQueueCount = 0;
+	devContext->DisplayStateWorkQueued = FALSE;
+	devContext->DisplayStateHardwareReady = FALSE;
+	devContext->DisplayStateAcceptingWork = FALSE;
 
 	//
 	// Get the resouce hub connection ID for our I2C driver
@@ -463,6 +740,7 @@ OnPrepareHardware(
 
 		goto exit;
 	}
+	spbInitialized = TRUE;
 
 	//
 	// Initialize Touch Power so the driver can issue power state changes
@@ -479,6 +757,9 @@ OnPrepareHardware(
 
 		goto exit;
 	}
+	powerInitialized = TRUE;
+
+	TchSetRuntimeState(devContext, TouchRuntimePrepared, "OnPrepareHardware");
 
 	//
 	// Get screen properties and populate context
@@ -500,6 +781,7 @@ OnPrepareHardware(
 
 		goto exit;
 	}
+	contextAllocated = TRUE;
 
 	//
 	// Fetch controller settings from registry
@@ -555,24 +837,28 @@ OnPrepareHardware(
 
 		goto exit;
 	}
+	deviceStarted = TRUE;
 
-	status = PoRegisterPowerSettingCallback(
-		NULL,
-		&GUID_ACDC_POWER_SOURCE,
-		TchPowerSettingCallback,
-		devContext,
-		&devContext->PoFxPowerSettingCallbackHandle1
-	);
+	TchSetRuntimeState(devContext, TouchRuntimeStarted, "OnPrepareHardware");
+	controllerContext = (FTS521_CONTROLLER_CONTEXT*)devContext->TouchContext;
 
-	if (!NT_SUCCESS(status))
+	if (controllerContext->TouchSettings.ChargerDetectionSupported != 0)
 	{
+		status = STATUS_NOT_SUPPORTED;
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_INIT,
-			"Error registering power setting callback (1) - 0x%08lX",
+			"ChargerDetectionSupported is enabled but FTS521 charger state control is not implemented - 0x%08lX",
 			status);
-
 		goto exit;
+	}
+	else
+	{
+		devContext->PoFxPowerSettingCallbackHandle1 = NULL;
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_INIT,
+			"Skipping AC/DC power callback because charger detection is not supported");
 	}
 
 	status = PoRegisterPowerSettingCallback(
@@ -601,6 +887,120 @@ OnPrepareHardware(
 	devContext->ReportDone = FALSE;
 
 exit:
+	if (!NT_SUCCESS(status))
+	{
+		NTSTATUS cleanupStatus;
+
+		cleanupStatus = TchStopDisplayStateHardwareWork(
+			devContext,
+			"OnPrepareHardwareCleanup");
+		if (!NT_SUCCESS(cleanupStatus))
+		{
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_INIT,
+				"Cleanup failed stopping display hardware work - 0x%08lX",
+				cleanupStatus);
+		}
+
+		if (devContext->PoFxPowerSettingCallbackHandle2 != NULL)
+		{
+			cleanupStatus = PoUnregisterPowerSettingCallback(
+				devContext->PoFxPowerSettingCallbackHandle2);
+			if (!NT_SUCCESS(cleanupStatus))
+			{
+				Trace(
+					TRACE_LEVEL_ERROR,
+					TRACE_INIT,
+					"Cleanup failed unregistering display callback - 0x%08lX",
+					cleanupStatus);
+			}
+			devContext->PoFxPowerSettingCallbackHandle2 = NULL;
+		}
+
+		if (devContext->PoFxPowerSettingCallbackHandle1 != NULL)
+		{
+			cleanupStatus = PoUnregisterPowerSettingCallback(
+				devContext->PoFxPowerSettingCallbackHandle1);
+			if (!NT_SUCCESS(cleanupStatus))
+			{
+				Trace(
+					TRACE_LEVEL_ERROR,
+					TRACE_INIT,
+					"Cleanup failed unregistering AC/DC callback - 0x%08lX",
+					cleanupStatus);
+			}
+			devContext->PoFxPowerSettingCallbackHandle1 = NULL;
+		}
+
+		TchFlushDisplayStateWorker(devContext, "OnPrepareHardwareCleanup");
+		cleanupStatus = TchDisableDisplayStateHardwareWork(
+			devContext,
+			"OnPrepareHardwareCleanup");
+		if (!NT_SUCCESS(cleanupStatus))
+		{
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_INIT,
+				"Cleanup failed disabling display hardware work - 0x%08lX",
+				cleanupStatus);
+		}
+
+		if (deviceStarted)
+		{
+			cleanupStatus = TchStopDevice(
+				devContext->TouchContext,
+				&devContext->I2CContext);
+			if (!NT_SUCCESS(cleanupStatus))
+			{
+				Trace(
+					TRACE_LEVEL_ERROR,
+					TRACE_INIT,
+					"Cleanup failed stopping touch device - 0x%08lX",
+					cleanupStatus);
+			}
+		}
+
+		if (contextAllocated)
+		{
+			cleanupStatus = TchFreeContext(devContext->TouchContext);
+			if (!NT_SUCCESS(cleanupStatus))
+			{
+				Trace(
+					TRACE_LEVEL_ERROR,
+					TRACE_INIT,
+					"Cleanup failed freeing touch context - 0x%08lX",
+					cleanupStatus);
+			}
+			devContext->TouchContext = NULL;
+		}
+
+		if (powerInitialized)
+		{
+			cleanupStatus = PowerDeInitialize(FxDevice);
+			if (!NT_SUCCESS(cleanupStatus))
+			{
+				Trace(
+					TRACE_LEVEL_ERROR,
+					TRACE_INIT,
+					"Cleanup failed deinitializing touch power - 0x%08lX",
+					cleanupStatus);
+			}
+		}
+
+		if (spbInitialized)
+		{
+			SpbTargetDeinitialize(FxDevice, &devContext->I2CContext);
+		}
+
+		if (devContext->ResetGpio != NULL)
+		{
+			WdfObjectDelete(devContext->ResetGpio);
+			devContext->ResetGpio = NULL;
+		}
+		devContext->HasResetGpio = FALSE;
+		TchSetRuntimeState(devContext, TouchRuntimeFailed, "OnPrepareHardware");
+	}
 
 	Trace(
 		TRACE_LEVEL_INFORMATION,
@@ -642,31 +1042,66 @@ OnReleaseHardware(
 
 	devContext = GetDeviceContext(FxDevice);
 
-	status = PoUnregisterPowerSettingCallback(
-		devContext->PoFxPowerSettingCallbackHandle1
-	);
-
+	status = STATUS_SUCCESS;
+	status = TchStopDisplayStateHardwareWork(devContext, "OnReleaseHardware");
 	if (!NT_SUCCESS(status))
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_INIT,
-			"Error unregistering power setting callback - 0x%08lX",
+			"Error stopping display hardware work - 0x%08lX",
 			status);
 	}
 
-	status = PoUnregisterPowerSettingCallback(
-		devContext->PoFxPowerSettingCallbackHandle2
-	);
+	if (devContext->PoFxPowerSettingCallbackHandle1 != NULL)
+	{
+		status = PoUnregisterPowerSettingCallback(
+			devContext->PoFxPowerSettingCallbackHandle1
+		);
 
+		if (!NT_SUCCESS(status))
+		{
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_INIT,
+				"Error unregistering power setting callback - 0x%08lX",
+				status);
+		}
+		devContext->PoFxPowerSettingCallbackHandle1 = NULL;
+	}
+
+	if (devContext->PoFxPowerSettingCallbackHandle2 != NULL)
+	{
+		status = PoUnregisterPowerSettingCallback(
+			devContext->PoFxPowerSettingCallbackHandle2
+		);
+
+		if (!NT_SUCCESS(status))
+		{
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_INIT,
+				"Error unregistering power setting callback - 0x%08lX",
+				status);
+		}
+		devContext->PoFxPowerSettingCallbackHandle2 = NULL;
+	}
+
+	TchFlushDisplayStateWorker(devContext, "OnReleaseHardware");
+	status = TchDisableDisplayStateHardwareWork(devContext, "OnReleaseHardware");
 	if (!NT_SUCCESS(status))
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_INIT,
-			"Error unregistering power setting callback - 0x%08lX",
+			"Error disabling display hardware work - 0x%08lX",
 			status);
 	}
+
+	TchCompleteIdleIrpWithStatus(
+		devContext,
+		STATUS_DELETE_PENDING,
+		"OnReleaseHardware");
 
 	status = TchStopDevice(devContext->TouchContext, &devContext->I2CContext);
 
@@ -689,6 +1124,10 @@ OnReleaseHardware(
 			"Error freeing touch context - 0x%08lX",
 			status);   
 	}
+	else
+	{
+		devContext->TouchContext = NULL;
+	}
 
 	//EventUnregisterMicrosoft_WindowsPhone_TouchMiniDriver();
 
@@ -707,6 +1146,13 @@ OnReleaseHardware(
 	}
 
 	SpbTargetDeinitialize(FxDevice, &GetDeviceContext(FxDevice)->I2CContext);
+	if (devContext->ResetGpio != NULL)
+	{
+		WdfObjectDelete(devContext->ResetGpio);
+		devContext->ResetGpio = NULL;
+	}
+	devContext->HasResetGpio = FALSE;
+	TchSetRuntimeState(devContext, TouchRuntimeUninitialized, "OnReleaseHardware");
 
 	Trace(
 		TRACE_LEVEL_INFORMATION,

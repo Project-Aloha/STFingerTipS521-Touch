@@ -50,7 +50,6 @@ TchStartDevice(
 --*/
 {
 	FTS521_CONTROLLER_CONTEXT* controller;
-	ULONG interruptStatus;
 	NTSTATUS status;
 
 	Trace(
@@ -59,7 +58,6 @@ TchStartDevice(
 		"TchStartDevice - Entry");
 
 	controller = (FTS521_CONTROLLER_CONTEXT*)ControllerContext;
-	interruptStatus = 0;
 	status = STATUS_SUCCESS;
 
 	//
@@ -112,21 +110,19 @@ TchStartDevice(
 	}
 
 	//
-	// Clear any pending interrupts
+	// Clear stale controller events with the documented system FIFO flush
+	// command before KMDF enables interrupt delivery.
 	//
-	status = Fts521CheckInterrupts(
-		ControllerContext,
-		SpbContext,
-		&interruptStatus
-	);
+	status = Fts521FlushFifo(SpbContext);
 
 	if (!NT_SUCCESS(status))
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_INIT,
-			"Could not get interrupt status - 0x%08lX%",
+			"Could not flush controller FIFO - 0x%08lX",
 			status);
+		goto exit;
 	}
 
 exit:

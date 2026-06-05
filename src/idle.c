@@ -25,6 +25,31 @@
 #include <idle.h>
 #include <idle.tmh>
 
+static
+PCSTR
+TchIdleStateName(
+	IN TOUCH_IDLE_STATE State
+)
+{
+	switch (State)
+	{
+	case TouchIdleNone:
+		return "NONE";
+	case TouchIdleCallbackQueued:
+		return "CALLBACK_QUEUED";
+	case TouchIdleForwarding:
+		return "FORWARDING";
+	case TouchIdleCompletionRequested:
+		return "COMPLETION_REQUESTED";
+	case TouchIdleParked:
+		return "PARKED";
+	case TouchIdleCompleting:
+		return "COMPLETING";
+	default:
+		return "UNKNOWN";
+	}
+}
+
 NTSTATUS
 TchProcessIdleRequest(
 	IN WDFDEVICE Device,
@@ -45,9 +70,8 @@ Routine Description:
 	 1) Queue a wait/wake IRP to the device, and
 	 2) Set the device to D3
 
-   In the case of this touch miniport, we are using the HID class driver's
-   enhanced power management functionality, whereby invoking the callback
-   results in an immediate exit from D0, powering off touch.
+   Invoking the callback allows HIDClass to power the stack down to D3. This
+   driver must not invoke it unless a D3 wake path is implemented and verified.
 
    The Request will be completed when either HIDCLASS cancels it or
    there is a device wake signal that will cause us to complete it.
@@ -72,6 +96,9 @@ Return Value:
 	PIRP irp;
 	PIO_STACK_LOCATION irpSp;
 	NTSTATUS status;
+#if TOUCH_HID_IDLE_D3_WAKE_SUPPORTED != 0
+	ULONG sequence;
+#endif
 
 	devContext = GetDeviceContext(Device);
 
@@ -118,6 +145,53 @@ Return Value:
 		goto exit;
 	}
 
+	if (devContext->IdleLock == NULL)
+	{
+		status = STATUS_INVALID_DEVICE_STATE;
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_HID,
+			"Error: Idle state lock is not initialized for request %p - 0x%08lX",
+			Request,
+			status);
+		goto exit;
+	}
+
+#if TOUCH_HID_IDLE_D3_WAKE_SUPPORTED == 0
+	status = STATUS_NOT_SUPPORTED;
+	Trace(
+		TRACE_LEVEL_ERROR,
+		TRACE_HID,
+		"Rejecting idle notification request %p because HID idle D3 wake is not implemented - 0x%08lX",
+		Request,
+		status);
+	goto exit;
+#else
+	WdfWaitLockAcquire(devContext->IdleLock, NULL);
+	if (devContext->IdleState != TouchIdleNone ||
+		devContext->IdleRequest != NULL)
+	{
+		status = STATUS_DEVICE_BUSY;
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_HID,
+			"Rejecting duplicate idle request %p currentRequest=%p state=%s sequence=%lu - 0x%08lX",
+			Request,
+			devContext->IdleRequest,
+			TchIdleStateName(devContext->IdleState),
+			devContext->IdleSequence,
+			status);
+		WdfWaitLockRelease(devContext->IdleLock);
+		goto exit;
+	}
+
+	devContext->IdleSequence++;
+	sequence = devContext->IdleSequence;
+	devContext->IdleRequest = Request;
+	devContext->IdleState = TouchIdleCallbackQueued;
+	devContext->IdleCompletionStatus = STATUS_SUCCESS;
+	WdfWaitLockRelease(devContext->IdleLock);
+
 	{
 		//
 		// Create a workitem for the idle callback
@@ -144,6 +218,16 @@ Return Value:
 				TRACE_HID,
 				"Error creating creating idle work item - 0x%08lX",
 				status);
+
+			WdfWaitLockAcquire(devContext->IdleLock, NULL);
+			if (devContext->IdleRequest == Request)
+			{
+				devContext->IdleRequest = NULL;
+				devContext->IdleState = TouchIdleNone;
+				devContext->IdleCompletionStatus = STATUS_SUCCESS;
+			}
+			WdfWaitLockRelease(devContext->IdleLock);
+
 			goto exit;
 		}
 
@@ -154,17 +238,23 @@ Return Value:
 		idleWorkItemContext->FxDevice = devContext->FxDevice;
 		idleWorkItemContext->FxRequest = Request;
 
+		*Pending = TRUE;
+
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_IDLE,
+			"Queued idle callback work item for Request:%p callback:%p context:%p sequence=%lu",
+			Request,
+			idleCallbackInfo->IdleCallback,
+			idleCallbackInfo->IdleContext,
+			sequence);
+
 		//
 		// Enqueue a workitem for the idle callback
 		//
 		WdfWorkItemEnqueue(idleWorkItem);
-
-		//
-		// Mark the request as pending so that 
-		// we can complete it when we come out of idle
-		//
-		*Pending = TRUE;
 	}
+#endif
 
 exit:
 
@@ -193,10 +283,25 @@ Return Value:
 
 --*/
 {
+#if TOUCH_HID_IDLE_D3_WAKE_SUPPORTED == 0
+	Trace(
+		TRACE_LEVEL_ERROR,
+		TRACE_IDLE,
+		"HID idle work item reached while HID idle D3 wake support is disabled");
+
+	WdfObjectDelete(IdleWorkItem);
+	return;
+#else
 	NTSTATUS status;
 	PIDLE_WORKITEM_CONTEXT idleWorkItemContext;
 	PDEVICE_EXTENSION deviceContext;
 	PHID_SUBMIT_IDLE_NOTIFICATION_CALLBACK_INFO idleCallbackInfo;
+	BOOLEAN completeRequest;
+	BOOLEAN forwardRequest;
+	BOOLEAN completeAfterForward;
+	NTSTATUS completionStatus;
+	ULONG sequence;
+	TOUCH_IDLE_STATE oldState;
 
 	idleWorkItemContext = GetWorkItemContext(IdleWorkItem);
 	NT_ASSERT(idleWorkItemContext != NULL);
@@ -216,53 +321,150 @@ Return Value:
 	//
 	idleCallbackInfo->IdleCallback(idleCallbackInfo->IdleContext);
 
-	//
-	// Park this request in our IdleQueue and mark it as pending
-	// This way if the IRP was cancelled, WDF will cancel it for us
-	//
-	status = WdfRequestForwardToIoQueue(
-		idleWorkItemContext->FxRequest,
-		deviceContext->IdleQueue);
+	completeRequest = FALSE;
+	forwardRequest = FALSE;
+	completeAfterForward = FALSE;
+	completionStatus = STATUS_SUCCESS;
+	sequence = 0;
+	oldState = TouchIdleNone;
 
-	if (!NT_SUCCESS(status))
+	WdfWaitLockAcquire(deviceContext->IdleLock, NULL);
+
+	if (deviceContext->IdleRequest != idleWorkItemContext->FxRequest)
 	{
-		//
-		// IdleQueue is a manual-dispatch, non-power-managed queue. This should
-		// *never* fail.
-		//
-
-		NT_ASSERTMSG("WdfRequestForwardToIoQueue to IdleQueue failed!", FALSE);
-
+		status = STATUS_CANCELLED;
+		completeRequest = TRUE;
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_IDLE,
-			"Error forwarding idle notification Request:0x%p to IdleQueue:0x%p - 0x%08lX",
+			"Idle callback work item found stale request %p currentRequest=%p state=%s - 0x%08lX",
 			idleWorkItemContext->FxRequest,
-			deviceContext->IdleQueue,
+			deviceContext->IdleRequest,
+			TchIdleStateName(deviceContext->IdleState),
 			status);
-
-		//
-		// Complete the request if we couldnt forward to the Idle Queue
-		//
-		WdfRequestComplete(idleWorkItemContext->FxRequest, status);
+	}
+	else if (deviceContext->IdleState == TouchIdleCompletionRequested)
+	{
+		status = deviceContext->IdleCompletionStatus;
+		sequence = deviceContext->IdleSequence;
+		deviceContext->IdleRequest = NULL;
+		deviceContext->IdleState = TouchIdleNone;
+		deviceContext->IdleCompletionStatus = STATUS_SUCCESS;
+		completeRequest = TRUE;
+	}
+	else if (deviceContext->IdleState == TouchIdleCallbackQueued)
+	{
+		status = STATUS_SUCCESS;
+		sequence = deviceContext->IdleSequence;
+		deviceContext->IdleState = TouchIdleForwarding;
+		forwardRequest = TRUE;
 	}
 	else
+	{
+		status = STATUS_INVALID_DEVICE_STATE;
+		sequence = deviceContext->IdleSequence;
+		oldState = deviceContext->IdleState;
+		deviceContext->IdleRequest = NULL;
+		deviceContext->IdleState = TouchIdleNone;
+		deviceContext->IdleCompletionStatus = STATUS_SUCCESS;
+		completeRequest = TRUE;
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_IDLE,
+			"Idle callback work item found unexpected state=%s for Request:%p sequence=%lu - 0x%08lX",
+			TchIdleStateName(oldState),
+			idleWorkItemContext->FxRequest,
+			sequence,
+			status);
+	}
+
+	WdfWaitLockRelease(deviceContext->IdleLock);
+
+	if (completeRequest)
 	{
 		Trace(
 			TRACE_LEVEL_INFORMATION,
 			TRACE_IDLE,
-			"Forwarded idle notification Request:0x%p to IdleQueue:0x%p - 0x%08lX",
+			"Completing idle Request:%p immediately after callback sequence=%lu - 0x%08lX",
 			idleWorkItemContext->FxRequest,
-			deviceContext->IdleQueue,
+			sequence,
 			status);
+		WdfRequestComplete(idleWorkItemContext->FxRequest, status);
+		goto exit;
 	}
 
+	if (forwardRequest)
+	{
+		status = WdfRequestForwardToIoQueue(
+			idleWorkItemContext->FxRequest,
+			deviceContext->IdleQueue);
+	}
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_IDLE,
+			"Error forwarding idle notification Request:%p to IdleQueue:%p sequence=%lu - 0x%08lX",
+			idleWorkItemContext->FxRequest,
+			deviceContext->IdleQueue,
+			sequence,
+			status);
+
+		WdfWaitLockAcquire(deviceContext->IdleLock, NULL);
+		if (deviceContext->IdleRequest == idleWorkItemContext->FxRequest)
+		{
+			deviceContext->IdleRequest = NULL;
+			deviceContext->IdleState = TouchIdleNone;
+			deviceContext->IdleCompletionStatus = STATUS_SUCCESS;
+		}
+		WdfWaitLockRelease(deviceContext->IdleLock);
+
+		WdfRequestComplete(idleWorkItemContext->FxRequest, status);
+	}
+	else
+	{
+		WdfWaitLockAcquire(deviceContext->IdleLock, NULL);
+		if (deviceContext->IdleRequest == idleWorkItemContext->FxRequest &&
+			deviceContext->IdleState == TouchIdleCompletionRequested)
+		{
+			completionStatus = deviceContext->IdleCompletionStatus;
+			completeAfterForward = TRUE;
+		}
+
+		if (deviceContext->IdleRequest == idleWorkItemContext->FxRequest)
+		{
+			deviceContext->IdleState = TouchIdleParked;
+		}
+		WdfWaitLockRelease(deviceContext->IdleLock);
+
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_IDLE,
+			"Forwarded idle notification Request:%p to IdleQueue:%p sequence=%lu completeAfterForward=%d - 0x%08lX",
+			idleWorkItemContext->FxRequest,
+			deviceContext->IdleQueue,
+			sequence,
+			completeAfterForward,
+			status);
+
+		if (completeAfterForward)
+		{
+			TchCompleteIdleIrpWithStatus(
+				deviceContext,
+				completionStatus,
+				"TchIdleIrpWorkitem");
+		}
+	}
+
+exit:
 	//
 	// Delete the workitem since we're done with it
 	//
 	WdfObjectDelete(IdleWorkItem);
 
 	return;
+#endif
 }
 
 
@@ -287,43 +489,192 @@ Return Value:
 
 --*/
 {
-	NTSTATUS status;
-	WDFREQUEST request = NULL;
+	TchCompleteIdleIrpWithStatus(
+		FxDeviceContext,
+		STATUS_SUCCESS,
+		"TchCompleteIdleIrp");
+}
 
-	//
-	// Lets try to retrieve the Idle IRP from the Idle queue
-	//
+VOID
+TchCompleteIdleIrpWithStatus(
+	IN PDEVICE_EXTENSION FxDeviceContext,
+	IN NTSTATUS CompletionStatus,
+	IN PCSTR Source
+)
+{
+	NTSTATUS status;
+	WDFREQUEST expectedRequest;
+	WDFREQUEST request;
+	TOUCH_IDLE_STATE idleState;
+	ULONG sequence;
+
+	if (FxDeviceContext->IdleLock == NULL)
+	{
+		return;
+	}
+
+	expectedRequest = NULL;
+	request = NULL;
+	sequence = 0;
+
+	WdfWaitLockAcquire(FxDeviceContext->IdleLock, NULL);
+	idleState = FxDeviceContext->IdleState;
+	expectedRequest = FxDeviceContext->IdleRequest;
+	sequence = FxDeviceContext->IdleSequence;
+
+	switch (idleState)
+	{
+	case TouchIdleNone:
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_IDLE,
+			"%s found no pending idle request sequence=%lu",
+			Source,
+			sequence);
+		WdfWaitLockRelease(FxDeviceContext->IdleLock);
+		return;
+
+	case TouchIdleCallbackQueued:
+	case TouchIdleForwarding:
+		FxDeviceContext->IdleState = TouchIdleCompletionRequested;
+		FxDeviceContext->IdleCompletionStatus = CompletionStatus;
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_IDLE,
+			"%s deferred idle completion for Request:%p state=%s sequence=%lu completion=0x%08lX",
+			Source,
+			expectedRequest,
+			TchIdleStateName(idleState),
+			sequence,
+			CompletionStatus);
+		WdfWaitLockRelease(FxDeviceContext->IdleLock);
+		return;
+
+	case TouchIdleCompletionRequested:
+	case TouchIdleCompleting:
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_IDLE,
+			"%s idle request already completing Request:%p state=%s sequence=%lu",
+			Source,
+			expectedRequest,
+			TchIdleStateName(idleState),
+			sequence);
+		WdfWaitLockRelease(FxDeviceContext->IdleLock);
+		return;
+
+	case TouchIdleParked:
+		FxDeviceContext->IdleState = TouchIdleCompleting;
+		break;
+
+	default:
+		FxDeviceContext->IdleRequest = NULL;
+		FxDeviceContext->IdleState = TouchIdleNone;
+		FxDeviceContext->IdleCompletionStatus = STATUS_SUCCESS;
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_IDLE,
+			"%s resetting unknown idle state=%d Request:%p sequence=%lu",
+			Source,
+			idleState,
+			expectedRequest,
+			sequence);
+		WdfWaitLockRelease(FxDeviceContext->IdleLock);
+		return;
+	}
+
+	WdfWaitLockRelease(FxDeviceContext->IdleLock);
+
 	status = WdfIoQueueRetrieveNextRequest(
 		FxDeviceContext->IdleQueue,
 		&request);
 
-	//
-	// We did not find the Idle IRP, maybe it was cancelled
-	// 
-	if (!NT_SUCCESS(status) || (request == NULL))
+	if (NT_SUCCESS(status) && request != NULL)
 	{
-		Trace(
-			TRACE_LEVEL_WARNING,
-			TRACE_IDLE,
-			"Error finding idle notification request in IdleQueue:0x%p - 0x%08lX",
-			FxDeviceContext->IdleQueue,
-			status);
-	}
-	else
-	{
-		//
-		// Complete the Idle IRP
-		//
-		WdfRequestComplete(request, status);
+		WdfWaitLockAcquire(FxDeviceContext->IdleLock, NULL);
+		if (FxDeviceContext->IdleRequest == request)
+		{
+			FxDeviceContext->IdleRequest = NULL;
+			FxDeviceContext->IdleState = TouchIdleNone;
+			FxDeviceContext->IdleCompletionStatus = STATUS_SUCCESS;
+		}
+		WdfWaitLockRelease(FxDeviceContext->IdleLock);
 
 		Trace(
 			TRACE_LEVEL_INFORMATION,
 			TRACE_IDLE,
-			"Completed idle notification Request:0x%p from IdleQueue:0x%p - 0x%08lX",
+			"%s completed idle Request:%p from IdleQueue:%p sequence=%lu completion=0x%08lX",
+			Source,
 			request,
 			FxDeviceContext->IdleQueue,
-			status);
+			sequence,
+			CompletionStatus);
+
+		WdfRequestComplete(request, CompletionStatus);
+		return;
 	}
 
-	return;
+	WdfWaitLockAcquire(FxDeviceContext->IdleLock, NULL);
+	if (FxDeviceContext->IdleRequest == expectedRequest &&
+		FxDeviceContext->IdleState == TouchIdleCompleting)
+	{
+		FxDeviceContext->IdleRequest = NULL;
+		FxDeviceContext->IdleState = TouchIdleNone;
+		FxDeviceContext->IdleCompletionStatus = STATUS_SUCCESS;
+	}
+	WdfWaitLockRelease(FxDeviceContext->IdleLock);
+
+	Trace(
+		TRACE_LEVEL_WARNING,
+		TRACE_IDLE,
+		"%s could not retrieve idle Request:%p from IdleQueue:%p sequence=%lu retrieve=0x%08lX completion=0x%08lX",
+		Source,
+		expectedRequest,
+		FxDeviceContext->IdleQueue,
+		sequence,
+		status,
+		CompletionStatus);
+}
+
+VOID
+TchIdleRequestCanceledOnQueue(
+	IN WDFQUEUE Queue,
+	IN WDFREQUEST Request
+)
+{
+	PDEVICE_EXTENSION devContext;
+	WDFDEVICE device;
+	TOUCH_IDLE_STATE oldState;
+	ULONG sequence;
+
+	device = WdfIoQueueGetDevice(Queue);
+	devContext = GetDeviceContext(device);
+	oldState = TouchIdleNone;
+	sequence = 0;
+
+	if (devContext->IdleLock != NULL)
+	{
+		WdfWaitLockAcquire(devContext->IdleLock, NULL);
+		oldState = devContext->IdleState;
+		sequence = devContext->IdleSequence;
+
+		if (devContext->IdleRequest == Request)
+		{
+			devContext->IdleRequest = NULL;
+			devContext->IdleState = TouchIdleNone;
+			devContext->IdleCompletionStatus = STATUS_SUCCESS;
+		}
+
+		WdfWaitLockRelease(devContext->IdleLock);
+	}
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_IDLE,
+		"Idle request canceled on queue Request:%p oldState=%s sequence=%lu",
+		Request,
+		TchIdleStateName(oldState),
+		sequence);
+
+	WdfRequestComplete(Request, STATUS_CANCELLED);
 }

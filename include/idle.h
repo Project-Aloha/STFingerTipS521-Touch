@@ -49,6 +49,15 @@ TchCompleteIdleIrp(
 	IN PDEVICE_EXTENSION FxDeviceContext
 	);
 
+VOID
+TchCompleteIdleIrpWithStatus(
+	IN PDEVICE_EXTENSION FxDeviceContext,
+	IN NTSTATUS CompletionStatus,
+	IN PCSTR Source
+	);
+
 EVT_WDF_WORKITEM TchIdleIrpWorkitem;
+
+EVT_WDF_IO_QUEUE_IO_CANCELED_ON_QUEUE TchIdleRequestCanceledOnQueue;
 
 

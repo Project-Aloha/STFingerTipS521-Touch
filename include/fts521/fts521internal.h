@@ -249,10 +249,8 @@ Fts521ChangeSleepState(
 );
 
 NTSTATUS
-Fts521CheckInterrupts(
-	IN FTS521_CONTROLLER_CONTEXT* ControllerContext,
-	IN SPB_CONTEXT* SpbContext,
-	IN ULONG* InterruptStatus
+Fts521FlushFifo(
+	IN SPB_CONTEXT* SpbContext
 );
 
 NTSTATUS
