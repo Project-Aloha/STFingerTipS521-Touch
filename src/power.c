@@ -184,29 +184,29 @@ TchPowerSettingCallback(
 				TRACE_POWER,
 				"The Display is On");
 
-			if (devContext->ReportDone)
+			//
+			// Do NOT call SetResetGPIO here. The ACPI PEP (cust_touch_resources.asl)
+			// already owns GPIO 12 (Reset) and manages it as part of the D0/D3
+			// power state transitions. Driving the same GPIO from the driver while
+			// ACPI PEP is also managing it causes a conflict that can interfere with
+			// shutdown and resume sequences.
+			//
+			// Instead, simply switch the IC back to active scanning mode. The IC was
+			// either left in SCAN_MODE_LOW_POWER by the display-off path, or was
+			// fully power-cycled and reset by ACPI during D3->D0, in which case
+			// TchWakeDevice (called from OnD0Entry) has already restored active mode.
+			//
+			Fts521SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
+
+			// Drain any events that accumulated while the interrupt was disabled,
+			// so we start with a clean FIFO and avoid a spurious interrupt burst.
 			{
-				if (devContext->HasResetGpio)
-				{
-					// Perform a system reset of the IC.
-					SetResetGPIO(devContext->ResetGpio);
-				}
-
-				Fts521SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
-
-				// Clean Up event
 				BYTE EventBufferEmpty[256];
 				BYTE FTS521_READ_EVENTS[1] = { 0x86 };
 				FtsWriteReadU8UX(SpbContext, FTS521_READ_EVENTS, 1, EventBufferEmpty, 256);
-
-				WdfInterruptEnable(devContext->InterruptObject);
 			}
-			else
-			{
-				Fts521SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
 
-				WdfInterruptEnable(devContext->InterruptObject);
-			}
+			WdfInterruptEnable(devContext->InterruptObject);
 
 			break;
 		case 2:

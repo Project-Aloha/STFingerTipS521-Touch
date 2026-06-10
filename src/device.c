@@ -212,6 +212,16 @@ Return Value:
 
 	UNREFERENCED_PARAMETER(TargetState);
 
+	//
+	// Disable the interrupt before putting the device to standby.
+	// This prevents a deadlock during shutdown: if we skip this step and an ISR
+	// is already running (holding ControllerLock while doing an I2C transaction),
+	// TchStandbyDevice's WdfWaitLockAcquire(NULL) will block indefinitely if the
+	// I2C bus becomes unavailable before the transaction completes (e.g., the I2C
+	// controller itself powers down as part of the same D0->D3 transition).
+	//
+	WdfInterruptDisable(devContext->InterruptObject);
+
 	status = TchStandbyDevice(devContext->TouchContext, &devContext->I2CContext, &devContext->ReportContext);
 
 	if (!NT_SUCCESS(status))

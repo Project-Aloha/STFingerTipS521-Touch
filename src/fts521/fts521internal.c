@@ -286,21 +286,38 @@ Fts521ChangeSleepState(
 	IN UCHAR SleepState
 )
 {
-	  UNREFERENCED_PARAMETER(SpbContext);
-	  UNREFERENCED_PARAMETER(ControllerContext);
-	  UNREFERENCED_PARAMETER(SleepState);
+	NTSTATUS status;
+	UNREFERENCED_PARAMETER(ControllerContext);
 
-	  Trace(
-		  TRACE_LEVEL_ERROR,
-		  TRACE_REPORTING,
-		  "Fts521ChangeSleepState - Entry");
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"Fts521ChangeSleepState - Entry (SleepState=%d)", SleepState);
 
-	  Trace(
-		  TRACE_LEVEL_ERROR,
-		  TRACE_REPORTING,
-		  "Fts521ChangeSleepState - Exit");
+	if (SleepState == FTS521_F01_DEVICE_CONTROL_SLEEP_MODE_SLEEPING) {
+		// Disable active scanning and enter low-power mode before ACPI cuts power.
+		// This prevents the IC from holding the interrupt line active during D3
+		// transition, which would cause a shutdown hang via WdfWaitLockAcquire deadlock.
+		status = Fts521SetScanMode(SpbContext, SCAN_MODE_LOW_POWER, 0x00);
+	} else {
+		// Resume active scanning after D0 entry.
+		status = Fts521SetScanMode(SpbContext, SCAN_MODE_ACTIVE, 0x01);
+	}
 
-	  return STATUS_SUCCESS;
+	if (!NT_SUCCESS(status)) {
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_REPORTING,
+			"Fts521ChangeSleepState - Fts521SetScanMode failed 0x%08lX",
+			status);
+	}
+
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_REPORTING,
+		"Fts521ChangeSleepState - Exit 0x%08lX", status);
+
+	return status;
 }
 
 NTSTATUS
